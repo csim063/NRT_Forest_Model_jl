@@ -19,10 +19,8 @@ include("Modules/Initialise.jl")
 demography_df = DataFrame(CSV.File("Data/demography.txt"))
 site_df = DataFrame(CSV.File("Data/forest.txt"))
 
-
 #//---------------------------------------------------------------------------#
 #% Setup model
-Setup.setup() #*Note this is how to call the functions in the modules in the files you have included
 
 #//---------------------------------------------------------------------------#
 #% ...
@@ -35,7 +33,13 @@ using InteractiveDynamics
 using CairoMakie
 model = Setup.forest_model(site_df = site_df)
 
-fig, _ = abmplot(model;)
+
+speciescolor(a) = a.species_ID == 0 ? :white : a.treecolor
+
+fig,_  = abmplot(model;
+        ac = speciescolor,
+        am = :circle
+)
 fig
 
 #//---------------------------------------------------------------------------#

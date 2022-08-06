@@ -3,8 +3,9 @@ Module contains all of the functions required to setup the model at the start
 of a run
 """
 module Setup
-using Agents
-using Random
+    using Agents
+    using Random
+    using StatsBase
     #% Define agents
     #! !!!! BEST APPROACH IS PROBABLY TO HAVE ADULT TREES AS AGENTS AND 
     #! EVERYTHING ELSE INCLUDING SAPLINGS/SEEDLINGS AS PATCHE PROPERTIES
@@ -13,11 +14,12 @@ using Random
     ## TODO: Currently just dummy agents to try get model working
     # TODO: probably will need to define different agents for different things
     #? Maybe a dict of species key value pairs could be useful
-    @agent Trees GridAgent{2} begin 
+    @agent Tree GridAgent{2} begin 
         species_ID::Int
         height::Int
         dbh::Int
         age::Int
+        treecolor::Symbol #Just used for
     end
 
     #% Define world
@@ -31,7 +33,7 @@ using Random
         space = GridSpaceSingle(griddims; periodic = false);
         rng = MersenneTwister(seed)
 
-        model = ABM(Trees, space; 
+        model = ABM(Tree, space; 
             rng,
             scheduler = Schedulers.Randomly())
 
@@ -39,11 +41,34 @@ using Random
         grid = collect(positions(model))
         num_positions = prod(griddims)
 
+        colour_list = [
+            :firebrick1,
+            :gold1,
+            :turquoise3,
+            :royalblue1,
+            :deeppink2,
+            :darkorange1,
+            :forestgreen,
+            :cadetblue2,
+        ]
+
         #Make for loop that samples a proportion of space and allocates each species
-        #? Maybe find a way to get one tree per cell and then just have species set to a list with proportions set by proportion
-        used_positions = []::Matrix{Tuple{Int64, Int64}}
-        for species in 1:nrow(site_df)
-            #Create sample of
+        for p in 1:num_positions
+            # Todo get correct heights etc for each tree
+            #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
+            # Column 1 is species column 2 is initial abundance
+            specID = wsample(site_df[ : , 1], site_df[ : , 2])
+
+            adult_tree = Tree(
+                p,
+                grid[p],
+                specID,
+                0,
+                0,
+                0,
+                colour_list[specID]
+            )
+            add_agent_single!(adult_tree, model)
         end
         
         return model
