@@ -10,6 +10,7 @@ using Random
 using DelimitedFiles
 using DataFrames
 using CSV
+using Distributions
 
 ## Custom modules
 include("Modules/Initialise.jl")
@@ -31,14 +32,21 @@ site_df = DataFrame(CSV.File("Data/forest.txt"))
 ## TODO fix this
 using InteractiveDynamics
 using CairoMakie
-model = Setup.forest_model(site_df = site_df)
+model = Setup.forest_model(forest_area = 4,
+                           cell_grain = 4, 
+                           site_df = site_df,
+                           demography_df = demography_df
+                           )
 
 
 speciescolor(a) = a.species_ID == 0 ? :white : a.treecolor
+speciesshape(a) = a.growth_form == 1 ? :circle : :diamond
+speciessize(a) = a.age == 0 ? 8 : (8 + (a.age * 0.025))
 
 fig,_  = abmplot(model;
         ac = speciescolor,
-        am = :circle
+        am = speciesshape,
+        as = speciessize
 )
 fig
 
