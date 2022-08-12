@@ -12,6 +12,9 @@ using DataFrames
 using CSV
 using Distributions
 
+using Colors
+using ColorBrewer
+
 ## Custom modules
 include("Modules/Initialise.jl")
 
@@ -34,16 +37,18 @@ using InteractiveDynamics
 using CairoMakie
 model = Setup.forest_model(forest_area = 4,
                            cell_grain = 4, 
+                           edge_strength = 1.0,
                            site_df = site_df,
                            demography_df = demography_df
                            )
 
+cols = palette("Spectral", nrow(site_df));
+speciescolor(a) = a.species_ID == 0 ? :white : cols[a.species_ID]
 
-speciescolor(a) = a.species_ID == 0 ? :white : a.treecolor
 speciesshape(a) = a.growth_form == 1 ? :circle : :diamond
 speciessize(a) = a.age == 0 ? 8 : (8 + (a.age * 0.025))
 
-fig,_  = abmplot(model;
+fig,df  = abmplot(model;
         ac = speciescolor,
         am = speciesshape,
         as = speciessize

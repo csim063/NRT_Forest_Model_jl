@@ -6,6 +6,7 @@ module Setup
     using Agents
     using Random
     using StatsBase
+
     #% Define agents
     #? Maybe a dict of species key value pairs could be useful
     @agent Tree GridAgent{2} begin 
@@ -14,34 +15,39 @@ module Setup
         height::Float64
         dbh::Float64
         age::Float64
-        treecolor::Symbol #Just used for plotting
     end
 
     #% Define world
     function forest_model(;
         forest_area = 16,
         cell_grain = 4,
+        edge_strength = 0.0,
         site_df = site_df,
         demography_df = demography_df,
         seed = 999,)
         
         #? Could we define space as many dimensional and just add the properties like height
         #? and species present to this
-
-        dims = Int((sqrt(forest_area * 1e4)) / cell_grain)
+        ## Define globals
+        dims = trunc(Int, (sqrt(forest_area * 1e4)) / cell_grain)
 
         space = GridSpaceSingle((dims, dims); periodic = false);
         rng = MersenneTwister(seed)
 
-        ## Define patch properties (assigned later)
-        #! Can't quite think of how now but need to just assign the new column based on 
-        #! growth form column
-        # for _ in demography_df.growth_form
-        #     seedlings
+        seedling_survival = demography_df.seedling_survival
+        sapling_survival = demography_df.sapling_survival
+        seedling_transition = demography_df.seedling_transition
+        seedling_mortality = 1 .- (seedling_survival .+ seedling_transition)
+        sapling_mortality = 1 .- sapling_survival
 
+        edge_b0 = 0
+        edge_b1 = 1
+
+        ## Define patch properties
         properties = (
-            seedlings = zeros(Int, 8),
-            saplings = zeros(Int, 8),
+            seedlings = ifelse.(demography_df.growth_form .== 1, 10, 6),
+            saplings = ifelse.(demography_df.growth_form .== 1, 2, 1),
+            edge_weight = zeros(Float64, prod((dims, dims)))
         )
 
         model = ABM(Tree, space; 
@@ -53,17 +59,11 @@ module Setup
         grid = collect(positions(model))
         num_positions = prod((dims, dims))
 
-        ## TODO find a way to make an automated list based on species numbers
-        colour_list = [
-            :firebrick1,
-            :darkorange1,
-            :turquoise3,
-            :royalblue1,
-            :hotpink2,
-            :chocolate4,
-            :forestgreen,
-            :cadetblue2,
-        ]
+        #TODO Will need the below for calculating edges
+        #minimum(grid) #Get tuple of minimum x,y coordinates
+        #maximum(grid) #Get tuple of maximum x,y coordinates
+        #grid[2] .- minimum(grid) #Get distance (x,y) to edge from current cell OR minimum(grid[2] .- minimum(grid)) for one value
+
 
         #Make for loop that samples a proportion of space and allocates each species
         for p in 1:num_positions
@@ -75,8 +75,7 @@ module Setup
             grow_form = demography_df.growth_form[specID]
 
             ## Get height dbh and age
-            agent_demos = assign_demographic(#grow_form, 
-                                             specID, 
+            agent_demos = assign_demographic(specID, 
                                              site_df, 
                                              demography_df)
 
@@ -88,9 +87,14 @@ module Setup
                 agent_demos[1],
                 agent_demos[2],
                 agent_demos[3],
-                colour_list[specID]
             )
             add_agent_single!(adult_tree, model)
+
+            ## Update patch level properties
+            e_dist = minimum(grid[p] .- minimum(positions(model)))
+            weight = edge_b1 * exp(-edge_strength * e_dist) + edge_b0
+        
+            model.edge_weight[p...] = weight
         end
         
         return model
@@ -104,7 +108,6 @@ module Setup
     include("Demographic_assignments.jl")
 
     function assign_demographic(
-        #growth_form::Integer,
         species::Integer,
         site_df = site_df,
         demography_df = demography_df
