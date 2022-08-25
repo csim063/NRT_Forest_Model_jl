@@ -15,6 +15,9 @@ using Distributions
 using Colors
 using ColorBrewer
 
+using InteractiveDynamics
+using CairoMakie
+
 ## Custom modules
 include("Modules/Initialise.jl")
 
@@ -25,6 +28,13 @@ site_df = DataFrame(CSV.File("Data/forest.txt"))
 
 #//---------------------------------------------------------------------------#
 #% Setup model
+model = Setup.forest_model(forest_area = 4,
+                           cell_grain = 4, 
+                           edge_strength = 1.0,
+                           max_shade_distance = 32,
+                           site_df = site_df,
+                           demography_df = demography_df
+                           )
 
 #//---------------------------------------------------------------------------#
 #% ...
@@ -32,16 +42,6 @@ site_df = DataFrame(CSV.File("Data/forest.txt"))
 
 #//---------------------------------------------------------------------------#
 #% Visualise
-## TODO fix this
-using InteractiveDynamics
-using CairoMakie
-model = Setup.forest_model(forest_area = 4,
-                           cell_grain = 4, 
-                           edge_strength = 1.0,
-                           site_df = site_df,
-                           demography_df = demography_df
-                           )
-
 cols = palette("Spectral", nrow(site_df));
 speciescolor(a) = a.species_ID == 0 ? :white : cols[a.species_ID]
 
