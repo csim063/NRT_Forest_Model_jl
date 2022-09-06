@@ -30,14 +30,16 @@ module Setup
         max_shade_distance = 32,
         site_df = site_df,
         demography_df = demography_df,
-        seed = 999,)
+        seed = 999,
+        disturb_freq = 0.100,
+        max_disturb_size = 0.40)
         
         #? Could we define space as many dimensional and just add the properties like height
         #? and species present to this
         ## Define globals
         dims = trunc(Int, (sqrt(forest_area * 1e4)) / cell_grain)
 
-        space = GridSpaceSingle((dims, dims); periodic = false, metric = :manhattan);
+        space = GridSpaceSingle((dims, dims); periodic = false, metric = :chebyshev);
         rng = MersenneTwister(seed)
 
         seedling_survival = demography_df.seedling_survival
@@ -64,24 +66,37 @@ module Setup
 
         max_shell = max_shade_distance / cell_grain
 
-        ## Define patch properties
-        properties = (
-            seedlings = fill(seed_list, prod((dims, dims))),
-            saplings = fill(sap_list, prod((dims, dims))),
-            edge_weight = zeros(Float64, prod((dims, dims))),
-            previous_species = fill(Int64[], prod((dims, dims))),
-            previous_height = fill(Int64[], prod((dims, dims))),
-            previous_growth = fill(Float64[], prod((dims, dims))),
-            nhb_set = fill(fill(Tuple{Int64, Int64}[], Int(max_shell)), prod((dims, dims))),
-            close_nhbs_count = zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
-            nhb_shade_height = zeros(Float64, prod((dims, dims))),
-            nhb_light = zeros(Float64, prod((dims, dims))),
-            disturbed = zeros(Float64, prod((dims, dims))),
-            expand = falses(prod((dims, dims))),
-            last_change_tick = fill(Int64[], prod((dims, dims))),
-            n_changes = zeros(Float64, prod((dims, dims))),
-            seedling_density = fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
-            sapling_density = fill(sap_density, prod((dims, dims))) #Same as above
+        properties = Dict(
+            :patch_ID => zeros(Int64, prod((dims, dims))),
+            :pcor => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+            :seedlings => fill(seed_list, prod((dims, dims))),
+            :saplings => fill(sap_list, prod((dims, dims))),
+            :edge_weight => zeros(Float64, prod((dims, dims))),
+            :previous_species => fill(Int64[], prod((dims, dims))),
+            :previous_height => fill(Int64[], prod((dims, dims))),
+            :previous_growth => fill(Float64[], prod((dims, dims))),
+            :nhb_set => fill(fill(Tuple{Int64, Int64}[], Int(max_shell)), prod((dims, dims))),
+            :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
+            :nhb_shade_height => zeros(Float64, prod((dims, dims))),
+            :nhb_light => zeros(Float64, prod((dims, dims))),
+            :disturbed => falses(prod((dims, dims))),
+            :expand => falses(prod((dims, dims))),
+            :last_change_tick => fill(Int64[], prod((dims, dims))),
+            :n_changes => zeros(Float64, prod((dims, dims))),
+            :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
+            :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
+            #%Globals
+            :tick => 0,
+            :seedling_survival => seedling_survival,
+            :sapling_survival => sapling_survival,
+            :seedling_transition => seedling_transition,
+            :seedling_mortality => seedling_mortality,
+            :sapling_mortality => sapling_mortality,
+            :edge_b0 => edge_b0,
+            :edge_b1 => edge_b1,
+            #%User inputs
+            :disturbance_freq => disturb_freq,
+            :max_disturb_size => max_disturb_size
         )
         model = ABM(Tree, space; 
             properties,
@@ -94,6 +109,9 @@ module Setup
 
         #Make for loop that samples a proportion of space and allocates each species
         for p in 1:num_positions
+            model.patch_ID[p] = p
+            model.pcor[p] = grid[[p]]
+
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
             # Column 1 is species column 2 is initial abundance
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
