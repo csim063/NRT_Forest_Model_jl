@@ -59,12 +59,6 @@ module disturbance_functions
                 model.saplings[p] = zeros(Int, n_species)
                 model.disturbed[p] = false
             end
-
-            #MOVE THIS INTO ABOVE FOR LOOP
-            # n_species = length(model.seedlings[1])
-            # model.seedlings[model.disturbed .== true][] .= zeros(Int, n_species)
-            # model.saplings[model.disturbed .== true][] .= zeros(Int, n_species)
-            # model.disturbed[model.disturbed .== true] .= false
         end
     end
 end

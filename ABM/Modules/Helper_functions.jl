@@ -10,8 +10,37 @@ module distribution_functions
 
         return LogNormal(μ,σ)
     end
+
+    """
+    Function to allocate species based on saplings
+    Note it combines a number of Netlogo functions into one
+    """
+    function lottery(
+        input_list,
+        cumulative = true
+        )
+
+        summed_list = sum(input_list)[1]
+
+        if summed_list > 0
+            scale_bank = input_list / summed_list
+            if cumulative == true
+                scale_bank = cumsum(scale_bank)
+            end
+
+            #! I do not think this approach works if not set to cumulative above
+            #! Also that findfirst syntax with [] and . is nuts
+            r = rand(Uniform(0,1))
+            r_indx = findfirst(x->x[1] .> r[1], scale_bank)
+            
+            return(r_indx[1])
+        end
+    end
 end
 
+"""
+TODO
+"""
 module set_get_functions
     using Agents
     using StatsBase
@@ -19,37 +48,57 @@ module set_get_functions
     # TODO this function could be improved by vectorising
     function get_nhb_shade_height(
         cell_ID,
-        model
+        model,
+        grid,
+        crit_heights
     )
-        grid = collect(positions(model))
-        crit_heights = range(0, 36, step = 4)
-        
-        s_heights = Float64[]
-        focal_height = model[id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle})].height
-        
-        for n in range(1, length(model.nhb_set[cell_ID]))
-            crit_height = crit_heights[n]
-            for i in range(1, length(model.nhb_set[cell_ID][n]))
-                pos_id = model.nhb_set[cell_ID][n][i]
-                h = model[id_in_position(pos_id, model::ABM{<:GridSpaceSingle})].height
-                if h > crit_height && h > focal_height
-                        push!(s_heights, h)
+        if id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle}) == 0
+            final_s_hgts = 0.0
+        else
+            s_heights = Float64[]
+            agent = model[id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle})]
+            focal_height = agent.height
+
+            for n in range(1, length(model.nhb_set[cell_ID]))
+                if n ≠ 1
+                    for idx in setdiff(nearby_ids(agent.pos, model, n), nearby_ids(agent.pos, model, n-1))
+                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
+                            push!(s_heights, model[idx].height)
+                        end
+                    end
+                else
+                    for idx in nearby_ids(agent.pos, model, 1)
+                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
+                            push!(s_heights, model[idx].height)
+                        end
+                    end
                 end
             end
+            final_s_hgts = length(s_heights) > 0 ? mean(s_heights) : 0.0
         end
-        
-        return mean(s_heights)
+        return final_s_hgts
     end
 
     function get_light_env(
         cell_ID,
-        model,
-        demography_df
+        model
     )
-        l = model.nhb_shade_height[cell_ID] / maximum(demography_df.max_hgt)
+        l = model.nhb_shade_height[cell_ID] / maximum(model.max_heights)
         light = min(1.0, l)
 
         return light
     end
 
+    """
+    Simple function to update count of total trees of each species in the model
+    """
+    function update_abundances(
+        model
+    )
+        model.abundances = zeros(Int64, 8)
+
+        for i in allids(model)
+            model.abundances[model[i].species_ID] += 1
+        end
+    end
 end
