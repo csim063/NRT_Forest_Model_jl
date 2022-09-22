@@ -151,7 +151,7 @@ module demog_funcs
         #* Disperse seeds
         #TODO Probably a better way perhaps using the nagents function
         for s in 1:model.n_species
-            for i in 1:length(ldd_disperse)
+            for i in eachindex(ldd_disperse)#1:length(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
                     model.seedlings[rand(1:length(grid))][s] += 1
                 end
@@ -243,7 +243,6 @@ module demog_funcs
         #* trees older than 10 years have a chance of competition based death
         elseif (
             agent.age > 10.0 && 
-            #mean(model.previous_growth[cell]) < model.supp_tolerance[agent.species_ID] && 
             mean(agent.previous_growth) < model.supp_tolerance[agent.species_ID] &&
             rand(Uniform(0, 1)) < model.supp_mortality[agent.species_ID]
             )
@@ -255,7 +254,6 @@ module demog_funcs
             model.previous_species[cell] = agent.species_ID
             model.previous_height[cell] = agent.height
 
-            model.counter += 1
             kill_agent!(agent.id, model)
         end
     end
@@ -272,7 +270,6 @@ module demog_funcs
         grid
     )
         h = trunc(Int64, (model.previous_height[cell_ID] / model.cell_grain) + 1)
-        #model.pcor[2][1][1]
 
         nearby_trees = nearby_ids(grid[cell_ID], model::ABM{<:GridSpaceSingle}, h)
         ax = rand(1:2)
