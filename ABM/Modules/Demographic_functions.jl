@@ -32,7 +32,6 @@ module demog_funcs
         end
         
         #* Store growth penalty history for suppression mortality
-        #! NEED TO CONFIRM THIS IS NEEDED
         growth_reduction = competitive_penalty * edge_penalty
         prepend!(agent.previous_growth, growth_reduction)
         #check if agent list longer than 5 if so select only the first 5
@@ -244,7 +243,8 @@ module demog_funcs
         #* trees older than 10 years have a chance of competition based death
         elseif (
             agent.age > 10.0 && 
-            mean(model.previous_growth[cell]) < model.supp_tolerance[agent.species_ID] && 
+            #mean(model.previous_growth[cell]) < model.supp_tolerance[agent.species_ID] && 
+            mean(agent.previous_growth) < model.supp_tolerance[agent.species_ID] &&
             rand(Uniform(0, 1)) < model.supp_mortality[agent.species_ID]
             )
             if model.gap_maker[agent.species_ID] == 1
@@ -255,6 +255,7 @@ module demog_funcs
             model.previous_species[cell] = agent.species_ID
             model.previous_height[cell] = agent.height
 
+            model.counter += 1
             kill_agent!(agent.id, model)
         end
     end

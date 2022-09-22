@@ -121,7 +121,6 @@ module Setup
             :edge_weight => zeros(Float64, prod((dims, dims))),
             :previous_species => zeros(Float64, prod((dims, dims))),
             :previous_height => zeros(Float64, prod((dims, dims))),
-            :previous_growth => fill(Float64[], prod((dims, dims))),
             :nhb_set => fill(fill(Tuple{Int64, Int64}[], Int(max_shell)), prod((dims, dims))),
             :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
             :nhb_shade_height => zeros(Float64, prod((dims, dims))),
@@ -167,6 +166,7 @@ module Setup
             :shade_tolerance => shade_tolerance,
             :saplings_to_plant => saplings_to_plant,
             :max_density => sap_density,
+            :counter => 0, #TODO DELETE AFTER DEBUG
             #%User inputs
             :cell_grain => cell_grain,
             :disturbance_freq => disturb_freq,
@@ -200,8 +200,6 @@ module Setup
 
             model.seedlings[p] = copy(seed_list)
             model.saplings[p] = copy(sap_list)
-
-            model.previous_growth[p] = [0.0]
 
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
             # Column 1 is species column 2 is initial abundance
