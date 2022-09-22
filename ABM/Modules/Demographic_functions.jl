@@ -82,7 +82,7 @@ module demog_funcs
 
             for _ in 1:n_seeds
                 rand_cell = rand(rand(dispersal_nhb))
-                rand_cell_ID = findall(x->x==[rand_cell], model.pcor)[1]
+                rand_cell_ID = findfirst(x->x==[rand_cell], model.pcor)[1]
                 
                 if model.nhb_shade_height[rand_cell_ID] ≤ r_hgt
                     model.seedlings[rand_cell_ID][agent.species_ID] += 1
@@ -166,8 +166,7 @@ module demog_funcs
         agent,
         model
     )
-        #TODO Possibly replace all findall functions used to get patch pos from agent pos with findfirst
-        cell = findall(x->x==[agent.pos], model.pcor)[1]
+        cell = findfirst(x->x==[agent.pos], model.pcor)[1]
 
         model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* model.herbivory_amount)
         if model.saplings_eaten == true
@@ -184,7 +183,7 @@ module demog_funcs
     )
         inhibit = model.seedling_inhibition[agent.species_ID] 
         if inhibit > 0 && inhibit < 1
-            cell = findall(x->x==[agent.pos], model.pcor)[1]
+            cell = findfirst(x->x==[agent.pos], model.pcor)[1]
             model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* (1 - inhibit))
         end
     end
@@ -197,7 +196,7 @@ module demog_funcs
         model
     )
         if rand(Uniform(0, 1)) < model.macro_litter_effect
-            cell = findall(x->x==[agent.pos], model.pcor)[1] 
+            cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
             spp_die = rand(1:model.n_species)
             model.saplings[cell][spp_die] -= 1
         end
@@ -211,7 +210,7 @@ module demog_funcs
         model, 
     )
         mort_w = 1
-        cell = findall(x->x==[agent.pos], model.pcor)[1] 
+        cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
 
         #* Density dependent mortality
         if model.ddm == true
@@ -276,7 +275,7 @@ module demog_funcs
         fall_dir = model.pcor[cell_ID][1][ax]
         for i in nearby_trees 
             if model[i].pos[ax] == fall_dir
-                cell = findall(x->x==[model[i].pos], model.pcor)[1] 
+                cell = findfirst(x->x==[model[i].pos], model.pcor)[1] 
                 model.previous_species[cell] = model[i].species_ID
                 model.previous_height[cell] = model[i].height
 
