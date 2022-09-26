@@ -35,7 +35,7 @@ module disturbance_functions
                     for n in nearby_positions(grid[i], model::ABM{<:GridSpaceSingle}, 1)
                         #* 0.235 here is the approx Moore nhb percolation threshold for 
                         #* interesting bhv (see O'S & P 2013)
-                        N = findfirst(x->x==[n], model.pcor)[1]
+                        N = model[n].patch_here_ID
                         if model.disturbed[N] ≠ true && rand(Uniform(0,1)) ≤ 0.235
                             push!(new_disturb_front, N)
                             model.disturbed[N] = true

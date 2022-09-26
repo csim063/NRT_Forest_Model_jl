@@ -78,10 +78,11 @@ module demog_funcs
             #? This is a simplified allometric relationship from SORTIE-NZ
             cw = (0.284 * ((agent.dbh * 100) ^ 0.684))
             shell_width = Int(min(ceil(cw / model.cell_grain), length(model.nhb_set[agent.species_ID])))
-            dispersal_nhb = model.nhb_set[agent.species_ID][1:shell_width]
+            dispersal_nhb = model.nhb_set[agent.species_ID][1:shell_width] #! SEEMS WRONG AS SPECIES ID SEEMS ARBITRARY AS A SELECTOR
 
             for _ in 1:n_seeds
-                rand_cell = rand(rand(dispersal_nhb))
+                rand_cell = rand(rand(dispersal_nhb)) #THIS IS A (XCOR, YCOR)
+                #TODO try replace findfirst
                 rand_cell_ID = findfirst(x->x==[rand_cell], model.pcor)[1]
                 
                 if model.nhb_shade_height[rand_cell_ID] ≤ r_hgt
@@ -166,7 +167,7 @@ module demog_funcs
         agent,
         model
     )
-        cell = findfirst(x->x==[agent.pos], model.pcor)[1]
+        cell = agent.patch_here_ID
 
         model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* model.herbivory_amount)
         if model.saplings_eaten == true
@@ -183,7 +184,8 @@ module demog_funcs
     )
         inhibit = model.seedling_inhibition[agent.species_ID] 
         if inhibit > 0 && inhibit < 1
-            cell = findfirst(x->x==[agent.pos], model.pcor)[1]
+            #cell = findfirst(x->x==[agent.pos], model.pcor)[1]
+            cell = agent.patch_here_ID
             model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* (1 - inhibit))
         end
     end
@@ -196,7 +198,8 @@ module demog_funcs
         model
     )
         if rand(Uniform(0, 1)) < model.macro_litter_effect
-            cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
+            # cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
+            cell = agent.patch_here_ID
             spp_die = rand(1:model.n_species)
             model.saplings[cell][spp_die] -= 1
         end
@@ -210,7 +213,8 @@ module demog_funcs
         model, 
     )
         mort_w = 1
-        cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
+        # cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
+        cell = agent.patch_here_ID
 
         #* Density dependent mortality
         if model.ddm == true
