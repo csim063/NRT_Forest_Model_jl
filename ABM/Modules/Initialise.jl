@@ -16,6 +16,7 @@ module Setup
     #? Maybe a dict of species key value pairs could be useful
     @agent Tree GridAgent{2} begin 
         species_ID::Int
+        patch_here_ID::Int
         growth_form::Int
         height::Float64
         dbh::Float64
@@ -203,6 +204,7 @@ module Setup
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
             # Column 1 is species column 2 is initial abundance
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
+            patch_here_ID = model.patch_ID[p]
 
             grow_form = demography_df.growth_form[specID]
 
@@ -211,17 +213,15 @@ module Setup
                                              specID, 
                                              site_df)
 
-            adult_tree = Tree(
-                p,
-                grid[p],
-                specID,
-                grow_form,
-                agent_demog[1],
-                agent_demog[2],
-                agent_demog[3],
+            add_agent!(grid[p], model, 
+                specID, 
+                patch_here_ID,
+                grow_form, 
+                agent_demog[1], #height
+                agent_demog[2], #dbh
+                agent_demog[3], #age
                 Float64[]
-            )
-            add_agent_single!(adult_tree, model)
+                )
 
             ## Update patch level properties
             e_dist = minimum(grid[p] .- minimum(positions(model)))

@@ -329,6 +329,7 @@ module demog_funcs
 
             add_agent!(posit, model, 
                 new_species_id, 
+                cell_ID[1],
                 model.growth_forms[new_species_id], 
                 height, 
                 dbh, 
