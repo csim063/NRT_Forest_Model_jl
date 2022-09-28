@@ -50,7 +50,8 @@ module set_get_functions
         cell_ID,
         model,
         grid,
-        crit_heights
+        crit_heights,
+        shell_width
     )
         if id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle}) == 0
             final_s_hgts = 0.0
@@ -59,7 +60,7 @@ module set_get_functions
             agent = model[id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle})]
             focal_height = agent.height
 
-            for n in range(1, length(model.nhb_set[cell_ID]))
+            for n in 1:shell_width
                 if n ≠ 1
                     for idx in setdiff(nearby_ids(agent.pos, model, n), nearby_ids(agent.pos, model, n-1))
                         if model[idx].height > crit_heights[n] && model[idx].height > focal_height
