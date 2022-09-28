@@ -122,7 +122,7 @@ module Setup
             :edge_weight => zeros(Float64, prod((dims, dims))),
             :previous_species => zeros(Float64, prod((dims, dims))),
             :previous_height => zeros(Float64, prod((dims, dims))),
-            :nhb_set => fill(fill(Tuple{Int64, Int64}[], Int(max_shell)), prod((dims, dims))),
+            :nhb_set => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
             :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
             :nhb_shade_height => zeros(Float64, prod((dims, dims))),
             :nhb_light => zeros(Float64, prod((dims, dims))),
@@ -150,6 +150,7 @@ module Setup
             :max_heights => max_heights,
             :max_dbhs => max_dbhs,
             :max_ages => max_ages,
+            :shell_layers => Int64(max_shell),
             :base_mortality => base_mortality,
             :b2_jabowas => b2_jabowas,
             :b3_jabowas => b3_jabowas,
@@ -229,17 +230,25 @@ module Setup
             weight = edge_b1 * exp(-edge_strength * e_dist) + edge_b0
             model.edge_weight[p] = weight
 
-            #TODO fix this to be vectorised
-            d_nhbs = fill(Tuple{Int64, Int64}[], Int(max_shell))
-            for d in range(1, Int(max_shell))
-                nhbs_ids = Tuple{Int64, Int64}[]
-                for idx in nearby_positions(grid[p], model::ABM{<:GridSpaceSingle}, d)
-                    push!(nhbs_ids, idx)
-                end
-                d_nhbs[d] = d ≤ 1 ? nhbs_ids : setdiff(nhbs_ids, d_nhbs[d - 1])
-            end
-            model.nhb_set[p] = d_nhbs
-            model.close_nhbs_count[p] = length(d_nhbs[1])
+            #TODO fix this to be vectorised and functionised
+            # d_nhbs = fill(Tuple{Int64, Int64}[], Int(max_shell))
+            # for d in range(1, Int(max_shell))
+            #     nhbs_ids = Tuple{Int64, Int64}[]
+            #     for idx in nearby_positions(grid[p], model::ABM{<:GridSpaceSingle}, d)
+            #         push!(nhbs_ids, idx)
+            #     end
+            #     d_nhbs[d] = d ≤ 1 ? nhbs_ids : setdiff(nhbs_ids, d_nhbs[d - 1])
+            # end
+            # model.nhb_set[p] = d_nhbs
+            # model.close_nhbs_count[p] = length(d_nhbs[1])
+
+            model.nhb_set[p] = collect(nearby_positions(grid[p], 
+                                                        model::ABM{<:GridSpaceSingle}, 
+                                                        Int64(max_shell)))
+
+            model.close_nhbs_count[p] = length(collect(nearby_positions(grid[p], 
+                                                                        model::ABM{<:GridSpaceSingle}, 
+                                                                        1)))
         end
 
         #! Note we have a second loop to assign some features as by default things in Julia do not
@@ -250,8 +259,8 @@ module Setup
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
                                                                                collect(positions(model)),
-                                                                               range(0, 32, step = 4))
-            #model.nhb_light[i] = set_get_functions.get_light_env(i, model, demography_df) #* Not used in initialisation
+                                                                               range(0, 32, step = 4),
+                                                                               Int64(max_shell))
         end
         
         return model

@@ -69,19 +69,23 @@ module demog_funcs
         agent,
         model
     )
-        if model.seed_prod[agent.species_ID] > 0
+        if model.seed_prod[agent.species_ID] > zero(1) #*apparently zero(1) gives a 0 value which is more type stable than 0
             n_seeds = trunc(Int, (rand(Poisson(model.seed_prod[agent.species_ID])) * 
                         (1 - model.ldd_dispersal_fracs[agent.species_ID])))
             
             r_hgt = model.regen_heights[agent.species_ID]
             
             #? This is a simplified allometric relationship from SORTIE-NZ
-            cw = (0.284 * ((agent.dbh * 100) ^ 0.684))
-            shell_width = Int(min(ceil(cw / model.cell_grain), length(model.nhb_set[agent.species_ID])))
-            dispersal_nhb = model.nhb_set[agent.species_ID][1:shell_width] #! SEEMS WRONG AS SPECIES ID SEEMS ARBITRARY AS A SELECTOR
+            # TODO set constants
+            cw = (0.284 .* ((agent.dbh .* 100.0) .^ 0.654))
+            shell_width = Int64(min(ceil(cw ./ model.cell_grain), model.shell_layers))
+            nhb_count = length(collect(nearby_positions(agent.pos, 
+                                                    model::ABM{<:GridSpaceSingle}, 
+                                                    shell_width)))
+            dispersal_nhb = model.nhb_set[agent.patch_here_ID][1:nhb_count]
 
             for _ in 1:n_seeds
-                rand_cell = rand(rand(dispersal_nhb)) #THIS IS A (XCOR, YCOR)
+                rand_cell = rand(dispersal_nhb) #THIS IS A (XCOR, YCOR)
                 #TODO try replace findfirst
                 rand_cell_ID = findfirst(x->x==[rand_cell], model.pcor)[1]
                 

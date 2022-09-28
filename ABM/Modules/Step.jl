@@ -73,7 +73,8 @@ module go
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
                                                                                grid,
-                                                                               range(0, 32, step = 4))
+                                                                               range(0, 32, step = 4),
+                                                                               model.shell_layers)
 
             model.nhb_light[i] = set_get_functions.get_light_env(i, model)
         end
