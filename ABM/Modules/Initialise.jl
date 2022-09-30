@@ -81,10 +81,9 @@ module Setup
 
         seedling_inhibition = demography_df.seedling_inhibition
 
-        edge_b0 = 0
-        edge_b1 = 1
+        edge_b0 = zero(Int64)
+        edge_b1 = one(Int64)
 
-        #seed_list = Int64[]
         seed_list = seeds = Int64[]
         sap_list = Int64[]
         for i in demography_df.growth_form
@@ -134,61 +133,61 @@ module Setup
             :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
             :expand => falses(prod((dims, dims))),
             #%Globals
-            :tick => 0,
-            :n_species => n_species,
-            :seedling_survival => seedling_survival,
-            :sapling_survival => sapling_survival,
-            :seedling_transition => seedling_transition,
-            :seedling_mortality => seedling_mortality,
-            :sapling_mortality => sapling_mortality,
-            :seedling_inhibition => seedling_inhibition,
+            :tick => zero(1),
+            :n_species => n_species::Int64,
+            :seedling_survival => seedling_survival::Vector{Float64},
+            :sapling_survival => sapling_survival::Vector{Float64},
+            :seedling_transition => seedling_transition::Vector{Float64},
+            :seedling_mortality => seedling_mortality::Vector{Float64},
+            :sapling_mortality => sapling_mortality::Vector{Float64},
+            :seedling_inhibition => seedling_inhibition::Vector{Int64},
             :abundances => zeros(Int64, n_species),
-            :edge_b0 => edge_b0,
-            :edge_b1 => edge_b1,
-            :growth_forms => growth_forms,
-            :g_jabowas => g_jabowas,
-            :max_heights => max_heights,
-            :max_dbhs => max_dbhs,
-            :max_ages => max_ages,
+            :edge_b0 => edge_b0::Int64,
+            :edge_b1 => edge_b1::Int64,
+            :growth_forms => growth_forms::Vector{Int64},
+            :g_jabowas => g_jabowas::Vector{Float64},
+            :max_heights => max_heights::Vector{Int64},
+            :max_dbhs => max_dbhs::Vector{Float64},
+            :max_ages => max_ages::Vector{Int64},
             :shell_layers => Int64(max_shell),
-            :base_mortality => base_mortality,
-            :b2_jabowas => b2_jabowas,
-            :b3_jabowas => b3_jabowas,
-            :repro_ages => repro_ages,
-            :repro_heights => repro_heights,
-            :seed_prod => seed_prod,
-            :ldd_dispersal_fracs => ldd_dispersal_fracs,
-            :ldd_dispersal_dist => ldd_dispersal_dist,
-            :regen_heights => regen_heights,
-            :external_species => external_species,
-            :herbivory_amount => herbivory_amount,
-            :supp_tolerance => supp_tolerance,
-            :supp_mortality => supp_mortality,
-            :gap_maker => gap_maker,
-            :shade_tolerance => shade_tolerance,
-            :saplings_to_plant => saplings_to_plant,
-            :max_density => sap_density,
+            :base_mortality => base_mortality::Vector{Float64},
+            :b2_jabowas => b2_jabowas::Vector{Float64},
+            :b3_jabowas => b3_jabowas::Vector{Float64},
+            :repro_ages => repro_ages::Vector{Int64},
+            :repro_heights => repro_heights::Vector{Float64},
+            :seed_prod => seed_prod::Vector{Int64},
+            :ldd_dispersal_fracs => ldd_dispersal_fracs::Vector{Float64},
+            :ldd_dispersal_dist => ldd_dispersal_dist::Vector{Int64},
+            :regen_heights => regen_heights::Vector{Int64},
+            :external_species => external_species::Vector{Float64},
+            :herbivory_amount => herbivory_amount::Vector{Float64},
+            :supp_tolerance => supp_tolerance::Vector{Float64},
+            :supp_mortality => supp_mortality::Vector{Float64},
+            :gap_maker => gap_maker::Vector{Int64},
+            :shade_tolerance => shade_tolerance::Vector{Float64},
+            :saplings_to_plant => saplings_to_plant::Vector{Int64},
+            :max_density => sap_density::Int64,
             #%User inputs
-            :cell_grain => cell_grain,
-            :disturbance_freq => disturb_freq,
-            :max_disturb_size => max_disturb_size,
-            :comp_multiplier => comp_multiplier,
-            :edge_effects => edge_effects,
-            :edge_responses => edge_responses,
-            :external_rain => external_rain,
-            :ext_dispersal_scenario => ext_dispersal_scenario,
-            :herbivory => herbivory,
-            :saplings_eaten => saplings_eaten,
-            :macro_litter_effect => macro_litter_effect,
-            :ddm => ddm,
-            :restoration_planting => restoration_planting,
-            :planting_frequency => planting_frequency
+            :cell_grain => cell_grain::Int64,
+            :disturbance_freq => disturb_freq::Float64,
+            :max_disturb_size => max_disturb_size::Float64,
+            :comp_multiplier => comp_multiplier::Float64,
+            :edge_effects => edge_effects::Bool,
+            :edge_responses => edge_responses::Vector{Float64},
+            :external_rain => external_rain::Bool,
+            :ext_dispersal_scenario => ext_dispersal_scenario::String,
+            :herbivory => herbivory::Bool,
+            :saplings_eaten => saplings_eaten::Bool,
+            :macro_litter_effect => macro_litter_effect::Float64,
+            :ddm => ddm::Bool,
+            :restoration_planting => restoration_planting::Bool,
+            :planting_frequency => planting_frequency::Int64
         )
         #TODO Give some thought as to the most efficient scheduler to use
         model = ABM(Tree, space; 
             properties,
             rng,
-            scheduler = Schedulers.Randomly())
+            scheduler = Schedulers.fastest)
 
         ## Populate the world with adult tree agents
         grid = collect(positions(model))
@@ -229,18 +228,6 @@ module Setup
             #! Note I have renamed edge-b2 as edge_strength
             weight = edge_b1 * exp(-edge_strength * e_dist) + edge_b0
             model.edge_weight[p] = weight
-
-            #TODO fix this to be vectorised and functionised
-            # d_nhbs = fill(Tuple{Int64, Int64}[], Int(max_shell))
-            # for d in range(1, Int(max_shell))
-            #     nhbs_ids = Tuple{Int64, Int64}[]
-            #     for idx in nearby_positions(grid[p], model::ABM{<:GridSpaceSingle}, d)
-            #         push!(nhbs_ids, idx)
-            #     end
-            #     d_nhbs[d] = d ≤ 1 ? nhbs_ids : setdiff(nhbs_ids, d_nhbs[d - 1])
-            # end
-            # model.nhb_set[p] = d_nhbs
-            # model.close_nhbs_count[p] = length(d_nhbs[1])
 
             model.nhb_set[p] = collect(nearby_positions(grid[p], 
                                                         model::ABM{<:GridSpaceSingle}, 

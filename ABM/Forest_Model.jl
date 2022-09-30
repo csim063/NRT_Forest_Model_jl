@@ -32,7 +32,7 @@ site_df = DataFrame(CSV.File("Data/forest.txt"));
 ## First setup the dataframe where data will be saved
 adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
 
-model = Setup.forest_model(forest_area = 16,
+model = Setup.forest_model(forest_area = 4,
                            cell_grain = 4, 
                            n_species = 8,
                            edge_strength = 0.0,

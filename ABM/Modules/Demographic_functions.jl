@@ -67,33 +67,41 @@ module demog_funcs
     """
     function nhb_dispersal(
         agent,
-        model
+        model,
+        seed_production::Int64,
+        ldd_disp_frac::Float64,
+        r_hgt::Int64,
+        DBH::Float64,
+        cell_grain::Int64,
+        shell_layers::Int64,
+        pos::Tuple{Int64,Int64},
+        nhbs::Vector{Tuple{Int64, Int64}},
+        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+        shad_h::Vector{Float64},
+        seedlings::Vector{Vector{Int64}},
+        spec_ID::Int64
     )
-        if model.seed_prod[agent.species_ID] > zero(1) #*apparently zero(1) gives a 0 value which is more type stable than 0
-            n_seeds = trunc(Int, (rand(Poisson(model.seed_prod[agent.species_ID])) * 
-                        (1 - model.ldd_dispersal_fracs[agent.species_ID])))
-            
-            r_hgt = model.regen_heights[agent.species_ID]
-            
-            #? This is a simplified allometric relationship from SORTIE-NZ
-            # TODO set constants
-            cw = (0.284 .* ((agent.dbh .* 100.0) .^ 0.654))
-            shell_width = Int64(min(ceil(cw ./ model.cell_grain), model.shell_layers))
-            nhb_count = length(collect(nearby_positions(agent.pos, 
-                                                    model::ABM{<:GridSpaceSingle}, 
-                                                    shell_width)))
-            dispersal_nhb = model.nhb_set[agent.patch_here_ID][1:nhb_count]
+        n_seeds = trunc(Int, (rand(Poisson(seed_production)) * 
+                    (1 - ldd_disp_frac)))
+        
+        #? This is a simplified allometric relationship from SORTIE-NZ
+        # TODO set constants
+        cw = (0.284 .* ((DBH .* 100.0) .^ 0.654))
+        shell_width = Int64(min(ceil(cw ./ cell_grain), shell_layers))
+        nhb_count = length(collect(nearby_positions(pos, 
+                                                model::ABM{<:GridSpaceSingle}, 
+                                                shell_width)))
+        dispersal_nhb = nhbs[1:nhb_count]
 
-            for _ in 1:n_seeds
-                rand_cell = rand(dispersal_nhb) #THIS IS A (XCOR, YCOR)
-                #TODO try replace findfirst
-                rand_cell_ID = findfirst(x->x==[rand_cell], model.pcor)[1]
-                
-                if model.nhb_shade_height[rand_cell_ID] ≤ r_hgt
-                    model.seedlings[rand_cell_ID][agent.species_ID] += 1
-                end
-            end
-        end
+        # for _ in 1:n_seeds
+        set_get_functions.assign_seedling(n_seeds,
+                                        dispersal_nhb::Vector{Tuple{Int64, Int64}},
+                                        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+                                        shad_h::Vector{Float64},
+                                        r_hgt::Int64,
+                                        seedlings::Vector{Vector{Int64}},
+                                        spec_ID::Int64)
+        # end
     end
 
     """ 
@@ -117,7 +125,13 @@ module demog_funcs
             b = collect(nearby_positions(agent.pos, model::ABM{<:GridSpaceSingle}, D));
             D_nhbs = setdiff(b,a);
 
-            target = isempty(D_nhbs) ? Int64[] : findall(x->x==[rand(D_nhbs)], model.pcor)
+            target = Int64[]
+            if isempty(D_nhbs) == false
+                n = rand(D_nhbs)
+                # target = findall(x->x==n, model.pcor)
+                target = findall(isequal([n]), model.pcor)
+            end
+
             if length(target) > 0 #seeds that disperse beyond the patch are lost
                 target_id = rand(target)
                 if model.nhb_shade_height[target_id] <= model.regen_heights[agent.species_ID]
@@ -316,7 +330,7 @@ module demog_funcs
                 #TODO HERE I USE b3 AS IS USED IN INITIALISATION
                 b2 = model.b2_jabowas[new_species_id]
                 b3 = model.b3_jabowas[new_species_id]
-                height = 1.37 + (b2 * dbh) - (b3 * dbh * dbh)
+                height = 1.37 .+ (b2 .* dbh) .- (b3 .* dbh .* dbh)
                 age = 1.0
             elseif model.growth_forms[new_species_id] == 2
                 #TODO CONFIRM DBH OF GROWTH FORM 2 IN NETLOGO THEY ARE NOT DEFINED

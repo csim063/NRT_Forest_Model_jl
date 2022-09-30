@@ -102,4 +102,27 @@ module set_get_functions
             model.abundances[model[i].species_ID] += 1
         end
     end
+
+    """
+    Function to select random neighbor and increase seedlings there
+    """
+    function assign_seedling(
+        n_seeds,
+        dispersal_nhb,
+        pcors,
+        shad_h,
+        r_hgt,
+        seedlings,
+        spec_ID
+    )
+        for _ in 1:n_seeds
+            rand_cell = rand(dispersal_nhb) #THIS IS A (XCOR, YCOR)
+            #TODO try replace findfirst
+            rand_cell_ID = findfirst(x->x==[rand_cell], pcors)[1]
+            
+            if shad_h[rand_cell_ID] ≤ r_hgt
+                seedlings[rand_cell_ID][spec_ID] += Int64(1)
+            end
+        end
+    end
 end
