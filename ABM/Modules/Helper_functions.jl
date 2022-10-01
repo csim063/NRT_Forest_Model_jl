@@ -107,18 +107,15 @@ module set_get_functions
     Function to select random neighbor and increase seedlings there
     """
     function assign_seedling(
-        n_seeds,
-        dispersal_nhb,
-        pcors,
-        shad_h,
-        r_hgt,
-        seedlings,
-        spec_ID
+        n_seeds::Int64,
+        dispersal_nhb_id::Vector{Int64},
+        shad_h::Vector{Float64},
+        r_hgt::Int64,
+        seedlings::Vector{Vector{Int64}},
+        spec_ID::Int64
     )
         for _ in 1:n_seeds
-            rand_cell = rand(dispersal_nhb) #THIS IS A (XCOR, YCOR)
-            #TODO try replace findfirst
-            rand_cell_ID = findfirst(x->x==[rand_cell], pcors)[1]
+            rand_cell_ID = rand(dispersal_nhb_id)
             
             if shad_h[rand_cell_ID] ≤ r_hgt
                 seedlings[rand_cell_ID][spec_ID] += Int64(1)

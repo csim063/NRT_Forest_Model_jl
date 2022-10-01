@@ -122,6 +122,7 @@ module Setup
             :previous_species => zeros(Float64, prod((dims, dims))),
             :previous_height => zeros(Float64, prod((dims, dims))),
             :nhb_set => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+            :nhb_set_ids => fill(Int64[], prod((dims, dims))),
             :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
             :nhb_shade_height => zeros(Float64, prod((dims, dims))),
             :nhb_light => zeros(Float64, prod((dims, dims))),
@@ -248,6 +249,13 @@ module Setup
                                                                                collect(positions(model)),
                                                                                range(0, 32, step = 4),
                                                                                Int64(max_shell))
+
+            n_ids = Int64[]
+            for n in model.nhb_set[i]
+                n_id = findfirst(isequal([n]), model.pcor)
+                push!(n_ids, n_id)
+            end
+            model.nhb_set_ids[i] = n_ids
         end
         
         return model

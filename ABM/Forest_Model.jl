@@ -67,7 +67,7 @@ run!(model, go.agent_step!, go.model_step!, 5)
 #! Remember to have run init and run at least once before profiling to avoid measuring compilation
 #using Profile
 #@profile run!(model, go.agent_step!, go.model_step!, 50)
-@profview run!(model, go.agent_step!, go.model_step!, 50)
+@profview run!(model, go.agent_step!, go.model_step!, 150)
 #//---------------------------------------------------------------------------#
 #% Visualise
 cols = palette("Spectral", nrow(site_df));

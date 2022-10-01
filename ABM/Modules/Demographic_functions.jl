@@ -66,7 +66,6 @@ module demog_funcs
     Neighbourhood dispersal
     """
     function nhb_dispersal(
-        agent,
         model,
         seed_production::Int64,
         ldd_disp_frac::Float64,
@@ -75,8 +74,7 @@ module demog_funcs
         cell_grain::Int64,
         shell_layers::Int64,
         pos::Tuple{Int64,Int64},
-        nhbs::Vector{Tuple{Int64, Int64}},
-        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+        nhbs_id::Vector{Int64},
         shad_h::Vector{Float64},
         seedlings::Vector{Vector{Int64}},
         spec_ID::Int64
@@ -91,17 +89,16 @@ module demog_funcs
         nhb_count = length(collect(nearby_positions(pos, 
                                                 model::ABM{<:GridSpaceSingle}, 
                                                 shell_width)))
-        dispersal_nhb = nhbs[1:nhb_count]
+        
+        dispersal_nhb_id = nhbs_id[1:nhb_count]
 
-        # for _ in 1:n_seeds
-        set_get_functions.assign_seedling(n_seeds,
-                                        dispersal_nhb::Vector{Tuple{Int64, Int64}},
-                                        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+
+        set_get_functions.assign_seedling(n_seeds::Int64,
+                                        dispersal_nhb_id::Vector{Int64},
                                         shad_h::Vector{Float64},
                                         r_hgt::Int64,
                                         seedlings::Vector{Vector{Int64}},
                                         spec_ID::Int64)
-        # end
     end
 
     """ 
@@ -109,33 +106,41 @@ module demog_funcs
     """
     function ldd_within(
         agent,
-        model
+        model,
+        seed_production::Int64,
+        ldd_disp_frac::Float64,
+        ldd_dispersal_dist::Int64,
+        cell_grain::Int64,
+        pos::Tuple{Int64,Int64},
+        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+        shad_h::Vector{Float64},
+        r_hgt::Int64,
+        seedlings::Vector{Vector{Int64}},
+        spec_ID::Int64
     )
-        ldd_seeds = trunc(Int, (rand(Poisson(model.seed_prod[agent.species_ID])) * 
-                    (model.ldd_dispersal_fracs[agent.species_ID])))
+        ldd_seeds = trunc(Int, (rand(Poisson(seed_production)) .* (ldd_disp_frac)))
 
         #TODO this feels messy and likely slow (SEEMS TO ADD ABOUT 0.4sec per iteration alone)
         for _ in 1:ldd_seeds
-            D = trunc(rand(Exponential((model.ldd_dispersal_dist[agent.species_ID]) / model.cell_grain)));
+            D = trunc(rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
             
-            #TODO change this if you can find a way to select just cells at distance not within distance
-            # MAYBE x[findall(y -> y == 10, x)[1]] could be useful
+            #TODO change this if you can figure out a way to select just cells at distance not within distance
             # Suggested solution is to alter source code of nearby_positions
-            a = collect(nearby_positions(agent.pos, model::ABM{<:GridSpaceSingle}, (D-1)));
-            b = collect(nearby_positions(agent.pos, model::ABM{<:GridSpaceSingle}, D));
+            a = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, (D-1)));
+            b = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
             D_nhbs = setdiff(b,a);
 
+
             target = Int64[]
-            if isempty(D_nhbs) == false
+            if isempty(D_nhbs) .== false
                 n = rand(D_nhbs)
-                # target = findall(x->x==n, model.pcor)
-                target = findall(isequal([n]), model.pcor)
+                target = [findfirst(isequal([n]), pcors)]
             end
 
             if length(target) > 0 #seeds that disperse beyond the patch are lost
                 target_id = rand(target)
-                if model.nhb_shade_height[target_id] <= model.regen_heights[agent.species_ID]
-                    model.seedlings[target_id][agent.species_ID] += 1
+                if shad_h[target_id] <= r_hgt
+                    seedlings[target_id][spec_ID] += 1
                 end
             end
         end
@@ -147,32 +152,36 @@ module demog_funcs
     NOTE THIS IS ONLY RUN ONCE PER TICK NOT ONCE PER AGENT PER TICK
     """
     function external_ldd(
-        model,
-        ext_dispersal_scenario,
-        grid
+        ext_dispersal_scenario::String,
+        grid::Matrix{Tuple{Int64, Int64}},
+        n_species::Int64,
+        abundances::Vector{Int64},
+        external_species::Vector{Float64},
+        seedlings::Vector{Vector{Int64}}
     )
         if ext_dispersal_scenario == "equal"
-            scalar = trunc((length((positions(model)))/model.n_species))
-            ldd_abundances = fill(scalar, model.n_species)
+            scalar = trunc((length(grid)./n_species))
+            ldd_abundances = fill(scalar, n_species)
 
         elseif ext_dispersal_scenario == "abundance"
-            ldd_abundances = model.abundances
+            ldd_abundances = abundances
         else
             error("Unknown external dispersal scenario ($ext_dispersal_scenario), must be 'equal' or 'abundance")
         end
         
         #* Rescale to get the number of seeds to disperse
-        crit_min = 0.01 * length((positions(model)))
+        crit_min = 0.01 .* length(grid)
         ldd_abundances[ldd_abundances.<crit_min] .= crit_min
-        fun = (n,p)->rand(Binomial(n,p))
-        ldd_disperse = map(fun,ldd_abundances, model.external_species)
+        fun = (n::Vector{Int64},p::Vector{Float64})->rand(Binomial(n,p))
+        ldd_disperse = map(fun,ldd_abundances, external_species)
 
         #* Disperse seeds
         #TODO Probably a better way perhaps using the nagents function
-        for s in 1:model.n_species
+        # for s in 1:model.n_species
+        for s in eachindex(n_species)
             for i in eachindex(ldd_disperse)#1:length(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
-                    model.seedlings[rand(1:length(grid))][s] += 1
+                    seedlings[rand(1:length(grid))][s] += 1
                 end
             end
         end
@@ -202,7 +211,6 @@ module demog_funcs
     )
         inhibit = model.seedling_inhibition[agent.species_ID] 
         if inhibit > 0 && inhibit < 1
-            #cell = findfirst(x->x==[agent.pos], model.pcor)[1]
             cell = agent.patch_here_ID
             model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* (1 - inhibit))
         end
@@ -216,7 +224,6 @@ module demog_funcs
         model
     )
         if rand(Uniform(0, 1)) < model.macro_litter_effect
-            # cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
             cell = agent.patch_here_ID
             spp_die = rand(1:model.n_species)
             model.saplings[cell][spp_die] -= 1
@@ -231,7 +238,6 @@ module demog_funcs
         model, 
     )
         mort_w = 1
-        # cell = findfirst(x->x==[agent.pos], model.pcor)[1] 
         cell = agent.patch_here_ID
 
         #* Density dependent mortality
@@ -297,7 +303,7 @@ module demog_funcs
         fall_dir = model.pcor[cell_ID][1][ax]
         for i in nearby_trees 
             if model[i].pos[ax] == fall_dir
-                cell = findfirst(x->x==[model[i].pos], model.pcor)[1] 
+                cell = model[i].patch_here_ID
                 model.previous_species[cell] = model[i].species_ID
                 model.previous_height[cell] = model[i].height
 
