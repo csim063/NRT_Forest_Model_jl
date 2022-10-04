@@ -381,20 +381,6 @@ module demog_funcs
             n_changes[cell_ID] .+= 1
 
             #* Add new adult tree as agent
-            #! ABSOLUTELY NO CLUE WHY I NEED TO CREATE A NEW TUPLE AND DIVE 3 LAYERS IN TO EACH VARIABLE
-            posit = (pcor[cell_ID][1][1][1], pcor[cell_ID][1][1][2])
-
-            # add_agent!(posit,
-            #     model,
-            #     new_species_id, 
-            #     cell_ID[1],
-            #     growth_forms[new_species_id], 
-            #     height, 
-            #     dbh, 
-            #     age, 
-            #     Float64[]
-            #     )
-
             new_agent = [new_species_id,
                         cell_ID[1],
                         growth_forms[new_species_id],

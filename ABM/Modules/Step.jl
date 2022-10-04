@@ -8,6 +8,7 @@ module go
     using StatsBase
     using DataFrames
     using Distributions
+    #using Shuffle
 
     include("Disturbance_functions.jl")
     include("Demographic_functions.jl")
@@ -166,7 +167,13 @@ module go
             
         end
 
-        for p in 1:length(grid)
+        empty_patches = Tuple{Int64, Int64}[]
+        for e in empty_positions(model)
+            push!(empty_patches, e)
+        end 
+
+        empty_patches = Random.shuffle!(empty_patches)
+        for p in eachindex(collect(copy(empty_patches)))
             cell_ID =[p]
             demog_funcs.capture_gap(cell_ID, 
                                     model, 
@@ -183,19 +190,39 @@ module go
                                     model.pcor)
         end
 
-        for a in 1:length(model.new_agents_list)
-            add_agent_single!(
+        count_ep = min(length(collect(empty_positions(model))),
+                        length(model.new_agents_list))
+
+        idxs = Random.shuffle(collect(1:count_ep))
+
+        for e in 1:count_ep
+            idx = idxs[e]
+            pos = empty_patches[idx]
+            add_agent!(pos,
                 model,
-                model.new_agents_list[a][1], 
-                model.new_agents_list[a][2],
-                model.new_agents_list[a][3], 
-                model.new_agents_list[a][4], 
-                model.new_agents_list[a][5], 
-                model.new_agents_list[a][6], 
+                model.new_agents_list[idx][1], 
+                model.new_agents_list[idx][2],
+                model.new_agents_list[idx][3], 
+                model.new_agents_list[idx][4], 
+                model.new_agents_list[idx][5], 
+                model.new_agents_list[idx][6], 
                 Float64[]
                 )
         end
-        model.new_agents_list = Any[]
+
+        # for a in 1:length(model.new_agents_list)
+        #     add_agent_single!(
+        #         model,
+        #         model.new_agents_list[a][1], 
+        #         model.new_agents_list[a][2],
+        #         model.new_agents_list[a][3], 
+        #         model.new_agents_list[a][4], 
+        #         model.new_agents_list[a][5], 
+        #         model.new_agents_list[a][6], 
+        #         Float64[]
+        #         )
+        # end
+        model.new_agents_list = Any[] #TODO type list
 
         for p in eachindex(grid)
             a_id = id_in_position(p, model::ABM{<:GridSpaceSingle})
@@ -233,12 +260,4 @@ module go
 
         tick += 1
     end
-end
-
-
-
-using Agents
-mutable struct Agent <: AbstractAgent
-    id::Int
-    pos::NTuple{4, Int}
 end
