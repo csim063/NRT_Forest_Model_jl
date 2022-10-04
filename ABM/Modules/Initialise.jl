@@ -168,6 +168,7 @@ module Setup
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
             :max_density => sap_density::Int64,
+            :new_agents_list => Any[],
             #%User inputs
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,

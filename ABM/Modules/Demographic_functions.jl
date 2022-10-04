@@ -236,15 +236,28 @@ module demog_funcs
     function death(
         agent,
         model, 
+        cell::Int64,
+        ddm::Bool,
+        species_ID::Int64,
+        base_mortality::Vector{Float64},
+        gap_maker::Vector{Int64},
+        expand::BitVector,
+        previous_species::Vector{Float64},
+        previous_height::Vector{Float64},
+        a_height::Float64,
+        id::Int64,
+        age::Float64,
+        previous_growth::Vector{Float64},
+        supp_tolerance::Vector{Float64},
+        supp_mortality::Vector{Float64}
     )
         mort_w = 1
-        cell = agent.patch_here_ID
 
         #* Density dependent mortality
-        if model.ddm == true
+        if ddm == true
             s_nhb = 0
             for i in nearby_ids(agent, model)
-                if model[i].species_ID == agent.species_ID
+                if model[i].species_ID == species_ID
                     s_nhb += 1
                 end
             end
@@ -255,33 +268,37 @@ module demog_funcs
 
         #* 1. Baseline-mortality   
         #*   Approximates the standard gap mortality model (see Keane et al. 2001)\
-        if rand(Uniform(0, 1)) < (model.base_mortality[agent.species_ID] * mort_w)
-            if model.gap_maker[agent.species_ID] == 1
-                model.expand[cell] = true
+        if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
+            if gap_maker[species_ID] == 1
+                expand[cell] = true
             end
             #! NOTE only saving last previous could change to list to record all
             #! but this may impact performance
-            model.previous_species[cell] = agent.species_ID
-            model.previous_height[cell] = agent.height
+            previous_species[cell] = species_ID
+            previous_height[cell] = a_height
 
-            kill_agent!(agent.id, model)
+            #model.total_deaths += 1
+            kill_agent!(id, model)
+            return
 
         #* 2. Suppression via low growth (p = growth-death if growth < crit-growth [a proportion]).
         #* trees older than 10 years have a chance of competition based death
         elseif (
-            agent.age > 10.0 && 
-            mean(agent.previous_growth) < model.supp_tolerance[agent.species_ID] &&
-            rand(Uniform(0, 1)) < model.supp_mortality[agent.species_ID]
+            age > 10.0 && 
+            mean(previous_growth) < supp_tolerance[species_ID] &&
+            rand(Uniform(0.0, 1.0)) < supp_mortality[species_ID]
             )
-            if model.gap_maker[agent.species_ID] == 1
-                model.expand[cell] = true
+            if gap_maker[species_ID] == 1
+                expand[cell] = true
             end
             #! NOTE only saving last previous could change to list to record all
             #! but this may impact performance
-            model.previous_species[cell] = agent.species_ID
-            model.previous_height[cell] = agent.height
+            previous_species[cell] = species_ID
+            previous_height[cell] = a_height
 
-            kill_agent!(agent.id, model)
+            #model.total_deaths += 1
+            kill_agent!(id, model)
+            return
         end
     end
 
@@ -316,58 +333,80 @@ module demog_funcs
     Have a new tree grow from sapling in a gap
     """
     function capture_gap(
-        cell_ID,
-        model
+        cell_ID::Vector{Int64},
+        model,
+        seedlings::Vector{Vector{Int64}},
+        saplings::Vector{Vector{Int64}},
+        nhb_light::Vector{Float64},
+        shade_tolerance::Vector{Float64},
+        growth_forms::Vector{Int64},
+        b2_jabowas::Vector{Float64},
+        b3_jabowas::Vector{Float64},
+        last_change_tick::Vector{Int64},
+        tick::Int64,
+        n_changes::Vector{Int64},
+        pcor::Vector{Vector{Tuple{Int64, Int64}}}
     )
-        saplings = model.saplings[cell_ID]    
+        seedlings = seedlings[cell_ID]
+        saplings = saplings[cell_ID]    
 
         #? 0.25 is probability of one sapling becoming an adult
-        if sum(saplings)[1] >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings)[1]))
-            weights = floor.(Int, (abs.(model.nhb_light[cell_ID] .- 
-                                        model.shade_tolerance)) * 100)
+        if sum(saplings[1]) >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings[1])))
+            weights = floor.(Int, (abs.(nhb_light[cell_ID] .- 
+                                        shade_tolerance)) * 100)
 
-            regenbank_wgt = saplings .* weights
+            regenbank_wgt = saplings[1] .* weights
 
             new_species_id = distribution_functions.lottery(regenbank_wgt, true)
-            if model.growth_forms[new_species_id] == 1
+            new_species_id = new_species_id !== nothing ? new_species_id : rand(1:length(seedlings))
+            if growth_forms[new_species_id] == 1
                 #? dbh (in m) of 0.01 m (1 cm) + noise (0, 0.01)
-                dbh = 0.01 + rand(Uniform(0, 0.01))
+                dbh = 0.01 .+ rand(Uniform(0, 0.01))
                 #TODO CONFIRM IN NETLOGO IT USES ONLY b2-jabowa I THINK THIS IS A MISTAKE 
                 #TODO HERE I USE b3 AS IS USED IN INITIALISATION
-                b2 = model.b2_jabowas[new_species_id]
-                b3 = model.b3_jabowas[new_species_id]
+                b2 = b2_jabowas[new_species_id]
+                b3 = b3_jabowas[new_species_id]
                 height = 1.37 .+ (b2 .* dbh) .- (b3 .* dbh .* dbh)
                 age = 1.0
-            elseif model.growth_forms[new_species_id] == 2
+            elseif growth_forms[new_species_id] == 2
                 #TODO CONFIRM DBH OF GROWTH FORM 2 IN NETLOGO THEY ARE NOT DEFINED
-                dbh = 0.01 + rand(Uniform(0, 0.01)) #!LIKELY WRONG
-                height = 1.5 + rand(Uniform(0, 0.1))
+                dbh = 0.01 .+ rand(Uniform(0, 0.01)) #!LIKELY WRONG
+                height = 1.5 .+ rand(Uniform(0, 0.1))
                 age = 1.0
             else
                 error("The growth form for $new_species_id is undefined, please check species demography data")
             end
 
-            #TODO could easily change last change tick into list of all ticks where changes occur
-            model.last_change_tick[cell_ID] .= model.tick
-            model.n_changes[cell_ID] .+= 1
+            last_change_tick[cell_ID] .= tick
+            n_changes[cell_ID] .+= 1
 
             #* Add new adult tree as agent
             #! ABSOLUTELY NO CLUE WHY I NEED TO CREATE A NEW TUPLE AND DIVE 3 LAYERS IN TO EACH VARIABLE
-            posit = (model.pcor[cell_ID][1][1][1], model.pcor[cell_ID][1][1][2])
+            posit = (pcor[cell_ID][1][1][1], pcor[cell_ID][1][1][2])
 
-            add_agent!(posit, model, 
-                new_species_id, 
-                cell_ID[1],
-                model.growth_forms[new_species_id], 
-                height, 
-                dbh, 
-                age, 
-                Float64[]
-                )
+            # add_agent!(posit,
+            #     model,
+            #     new_species_id, 
+            #     cell_ID[1],
+            #     growth_forms[new_species_id], 
+            #     height, 
+            #     dbh, 
+            #     age, 
+            #     Float64[]
+            #     )
+
+            new_agent = [new_species_id,
+                        cell_ID[1],
+                        growth_forms[new_species_id],
+                        height,
+                        dbh,
+                        age]
+
+            push!(model.new_agents_list, new_agent)
 
             #* Empty the regeneration bank
-            model.seedlings[cell_ID] = model.seedlings[cell_ID] - model.seedlings[cell_ID]
-            model.saplings[cell_ID] = model.saplings[cell_ID] - model.saplings[cell_ID]
+            seedlings = seedlings .- seedlings
+            saplings = saplings .- saplings
         end
     end
 
@@ -375,21 +414,25 @@ module demog_funcs
     Function to adjust seedling and sapling values in each patch
     """
     function regenerate_patch_bank(
-        cell_ID,
-        model
+        cell_ID::Int64,
+        seedlings::Vector{Vector{Int64}},
+        saplings::Vector{Vector{Int64}},
+        seedling_mortality::Vector{Float64},
+        sapling_mortality::Vector{Float64},
+        seedling_transition::Vector{Float64}
     )
-        dead_saplings = rand.(Binomial.(abs.(model.saplings[cell_ID]), model.sapling_mortality))
-        dead_seedlings = rand.(Binomial.(abs.(model.seedlings[cell_ID]), model.seedling_mortality))
+        dead_saplings = rand.(Binomial.(abs.(saplings[cell_ID]), sapling_mortality))
+        dead_seedlings = rand.(Binomial.(abs.(seedlings[cell_ID]), seedling_mortality))
 
-        model.saplings[cell_ID] = model.saplings[cell_ID] - dead_saplings
-        model.saplings[cell_ID] = replace(x-> x < 0 ? 0 : x, model.saplings[cell_ID])
-        model.seedlings[cell_ID] = model.seedlings[cell_ID] - dead_seedlings
-        model.seedlings[cell_ID] = replace(x-> x < 0 ? 0 : x, model.seedlings[cell_ID])
+        saplings[cell_ID] = saplings[cell_ID] - dead_saplings
+        saplings[cell_ID] = replace(x-> x < 0 ? 0 : x, saplings[cell_ID])
+        seedlings[cell_ID] = seedlings[cell_ID] - dead_seedlings
+        seedlings[cell_ID] = replace(x-> x < 0 ? 0 : x, seedlings[cell_ID])
 
         #* New saplings
-        new_saplings = rand.(Binomial.(abs.(model.seedlings[cell_ID]), model.seedling_transition))
+        new_saplings = rand.(Binomial.(abs.(seedlings[cell_ID]), seedling_transition))
 
-        model.saplings[cell_ID] = model.saplings[cell_ID] + new_saplings
-        model.seedlings[cell_ID] = model.seedlings[cell_ID] + new_saplings
+        saplings[cell_ID] = saplings[cell_ID] + new_saplings
+        seedlings[cell_ID] = seedlings[cell_ID] + new_saplings
     end
 end

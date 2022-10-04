@@ -23,7 +23,7 @@ module distribution_functions
         summed_list = sum(input_list)[1]
 
         if summed_list > 0
-            scale_bank = input_list / summed_list
+            scale_bank = input_list ./ summed_list
             if cumulative == true
                 scale_bank = cumsum(scale_bank)
             end
@@ -81,10 +81,10 @@ module set_get_functions
     end
 
     function get_light_env(
-        cell_ID,
-        model
+        nhb_shade_height::Float64,
+        max_heights::Vector{Int64}
     )
-        l = model.nhb_shade_height[cell_ID] / maximum(model.max_heights)
+        l = nhb_shade_height ./ maximum(max_heights)
         light = min(1.0, l)
 
         return light
@@ -94,12 +94,13 @@ module set_get_functions
     Simple function to update count of total trees of each species in the model
     """
     function update_abundances(
-        model
+        model,
+        n_species::Int64
     )
-        model.abundances = zeros(Int64, 8)
+        model.abundances = zeros(Int64, n_species)
 
         for i in allids(model)
-            model.abundances[model[i].species_ID] += 1
+            model.abundances[model[i].species_ID] += Int64(1)
         end
     end
 

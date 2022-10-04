@@ -23,13 +23,14 @@ module go
         agent,
         model
     )
+    
         spec_num = agent.species_ID
+        cell = agent.patch_here_ID
+        age = agent.age
         
         demog_funcs.grow(agent, model)
 
-        #TODO could stream line by combining two functions in if statement
-        #TODO into one and not re allocating their variables
-        if agent.age ≥ model.repro_ages[spec_num] && agent.height ≥ model.repro_heights[spec_num]
+        if age ≥ model.repro_ages[spec_num] && agent.height ≥ model.repro_heights[spec_num]
             sp = Int64(model.seed_prod[agent.species_ID])
             ldd_disp_frac = model.ldd_dispersal_fracs[agent.species_ID]
             cell_grain = model.cell_grain
@@ -38,7 +39,6 @@ module go
             shad_hs = model.nhb_shade_height
             r_hgt = model.regen_heights[agent.species_ID]
             seedlings = model.seedlings
-            spec_ID = agent.species_ID
             if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
                 nhbs = model.nhb_set[agent.patch_here_ID]
                 nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
@@ -54,7 +54,7 @@ module go
                                         nhbs_ids,
                                         shad_hs,
                                         seedlings,
-                                        spec_ID
+                                        spec_num
                                         )
 
             end
@@ -71,7 +71,7 @@ module go
                                    shad_hs,
                                    r_hgt,
                                    seedlings,
-                                   spec_ID)
+                                   spec_num)
         end
 
         if model.herbivory == true
@@ -85,7 +85,23 @@ module go
             demog_funcs.macro_litter_fall(agent, model)
         end
 
-        demog_funcs.death(agent, model)
+        demog_funcs.death(agent, 
+                          model,
+                          cell,
+                          model.ddm,
+                          spec_num,
+                          model.base_mortality,
+                          model.gap_maker,
+                          model.expand,
+                          model.previous_species,
+                          model.previous_height,
+                          agent.height,
+                          agent.id,
+                          age,
+                          agent.previous_growth,
+                          model.supp_tolerance,
+                          model.supp_mortality
+                          )
 
     end
 
@@ -96,6 +112,15 @@ module go
     """
     function model_step!(model)
         grid = collect(positions(model))
+        tick = model.tick
+
+        saplings = model.saplings
+        seedlings = model.seedlings
+
+        sapling_density = model.sapling_density
+        seedling_density = model.seedling_density
+
+        n_species = model.n_species
 
         if model.disturbance_freq > 0
             disturbance_functions.lsp_disturbance(model,
@@ -107,22 +132,22 @@ module go
                                                   model.close_nhbs_count,
                                                   model.pcor,
                                                   model.patch_ID,
-                                                  model.n_species,
-                                                  model.seedlings,
-                                                  model.saplings
+                                                  n_species,
+                                                  seedlings,
+                                                  saplings
                                                   )
         end
 
         if model.external_rain == true
             demog_funcs.external_ldd(model.ext_dispersal_scenario,
                                      grid,
-                                     model.n_species,
+                                     n_species,
                                      model.abundances,
                                      model.external_species,
-                                     model.seedlings)
+                                     seedlings)
         end
 
-        for i in 1:length(positions(model))
+        for i in 1:length(grid)
             if model.expand[i] == true
                 demog_funcs.expand_gap(i, 
                                        model,
@@ -135,30 +160,85 @@ module go
                                                                                range(0, 32, step = 4),
                                                                                model.shell_layers)
 
-            model.nhb_light[i] = set_get_functions.get_light_env(i, model)
+            model.nhb_light[i] = set_get_functions.get_light_env(model.nhb_shade_height[i], 
+                                                                model.max_heights)
+
+            
         end
 
-        for e in empty_positions(model) #TODO more variables in capture_gap
-            cell_ID = [findfirst(isequal([e]), model.pcor)] 
-            demog_funcs.capture_gap(cell_ID, model)
+        for p in 1:length(grid)
+            cell_ID =[p]
+            demog_funcs.capture_gap(cell_ID, 
+                                    model, 
+                                    seedlings,
+                                    saplings,
+                                    model.nhb_light,
+                                    model.shade_tolerance,
+                                    model.growth_forms,
+                                    model.b2_jabowas,
+                                    model.b3_jabowas,
+                                    model.last_change_tick,
+                                    tick,
+                                    model.n_changes,
+                                    model.pcor)
         end
 
-        if model.restoration_planting == true && mod(model.tick, model.planting_frequency) == 0
-            for i in 1:length(positions(model))
-                model.saplings[i] .+= model.saplings_to_plant
+        for a in 1:length(model.new_agents_list)
+            add_agent_single!(
+                model,
+                model.new_agents_list[a][1], 
+                model.new_agents_list[a][2],
+                model.new_agents_list[a][3], 
+                model.new_agents_list[a][4], 
+                model.new_agents_list[a][5], 
+                model.new_agents_list[a][6], 
+                Float64[]
+                )
+        end
+        model.new_agents_list = Any[]
+
+        for p in eachindex(grid)
+            a_id = id_in_position(p, model::ABM{<:GridSpaceSingle})
+            if a_id !== 0 && model[a_id].patch_here_ID == model.patch_ID[p]
+                model[a_id].patch_here_ID = model.patch_ID[p]
             end
         end
 
-        for i in 1:length(positions(model))
-            demog_funcs.regenerate_patch_bank(i, model)
-            model.seedling_density[i] = sum(model.seedlings[i])
-            model.sapling_density[i] = sum(model.saplings[i])
+        if model.restoration_planting == true && mod(model.tick, model.planting_frequency) == 0
+            for i in 1:length(grid)
+                saplings[i] .+= model.saplings_to_plant
+            end
         end
 
-        model.max_density = maximum(model.sapling_density)
+        seedling_mortality = model.seedling_mortality
+        sapling_mortality = model.sapling_mortality
+        seedling_transition = model.seedling_transition
+        for i in 1:length(grid)
+            demog_funcs.regenerate_patch_bank(i,
+                                            seedlings, 
+                                            saplings,
+                                            seedling_mortality,
+                                            sapling_mortality,
+                                            seedling_transition)
+            #TODO may be quicker to have a calc density function
+            seedling_density[i] = sum(seedlings[i])
+            sapling_density[i] = sum(saplings[i])
+        end
 
-        set_get_functions.update_abundances(model)
+        model.max_density = maximum(sapling_density)
 
-        model.tick += 1
+
+
+        set_get_functions.update_abundances(model, n_species)
+
+        tick += 1
     end
+end
+
+
+
+using Agents
+mutable struct Agent <: AbstractAgent
+    id::Int
+    pos::NTuple{4, Int}
 end
