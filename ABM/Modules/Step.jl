@@ -22,14 +22,45 @@ module go
     """
     function agent_step!(
         agent,
-        model
+        model,
+        nhb_shade_height = model.nhb_shade_height,
+        comp_multiplier = model.comp_multiplier,
+        edge_effects = model.edge_effects,
+        edge_weights = model.edge_weight,
+        edge_responses = model.edge_responses,
+        g_jabowas = model.g_jabowas,
+        b2_jabowas = model.b2_jabowas,
+        b3_jabowas = model.b3_jabowas,
+        max_dbhs = model.max_dbhs,
+        max_heights = model.max_heights
     )
     
         spec_num = agent.species_ID
         cell = agent.patch_here_ID
         age = agent.age
+        shade_height = nhb_shade_height[spec_num]
+        edge_weight = edge_weights[spec_num]
+        edge_response = edge_responses[spec_num]
+        g_jabowa = g_jabowas[spec_num]
+        b2_jabowa = b2_jabowas[spec_num]
+        b3_jabowa = b3_jabowas[spec_num]
+        max_dbh = max_dbhs[spec_num]
+        max_height = max_heights[spec_num]
         
-        demog_funcs.grow(agent, model)
+        demog_funcs.grow(agent, 
+                        shade_height,
+                        agent.height,
+                        comp_multiplier,
+                        edge_effects,
+                        edge_weight,
+                        edge_response,
+                        agent.growth_form,
+                        agent.dbh,
+                        g_jabowa,
+                        b2_jabowa,
+                        b3_jabowa,
+                        max_dbh,
+                        max_height)
 
         if age ≥ model.repro_ages[spec_num] && agent.height ≥ model.repro_heights[spec_num]
             sp = Int64(model.seed_prod[agent.species_ID])
@@ -37,11 +68,11 @@ module go
             cell_grain = model.cell_grain
             a_position = agent.pos
             p_cors = model.pcor
-            shad_hs = model.nhb_shade_height
+            shad_hs = nhb_shade_height
             r_hgt = model.regen_heights[agent.species_ID]
             seedlings = model.seedlings
             if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
-                nhbs = model.nhb_set[agent.patch_here_ID]
+                #nhbs = model.nhb_set[agent.patch_here_ID]
                 nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
 
                 demog_funcs.nhb_dispersal(model,

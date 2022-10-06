@@ -13,22 +13,33 @@ module demog_funcs
     """
     function grow(
         agent,
-        model
+        shade_height::Float64,
+        height::Float64,
+        comp_multiplier::Float64,
+        edge_effects::Bool,
+        edge_weight::Float64,
+        edge_responses::Float64,
+        growth_form::Int64,
+        dbh::Float64,
+        g_jabowas::Float64,
+        b2_jabowas::Float64,
+        b3_jabowas::Float64,
+        max_dbhs::Float64,
+        max_heights::Int64
     )
-        spec_num = agent.species_ID
         agent.age += 1
 
         #*Correct for nhb effects
         competitive_penalty = 1
-        if model.nhb_shade_height[spec_num] ≥ agent.height
-            comp_val = Float64(abs(Complex(agent.height / model.nhb_shade_height[spec_num]) ^ 0.5))
-            competitive_penalty = min(1, (model.comp_multiplier * comp_val))
+        if shade_height ≥ height
+            comp_val = Float64(abs(Complex(height ./ shade_height) .^ 0.5))
+            competitive_penalty = min(1, (comp_multiplier .* comp_val))
         end
 
         #* Account for edge effects if any
         edge_penalty = 1
-        if model.edge_effects == true
-            edge_penalty = (1 - (model.edge_weight[spec_num] * (1 - model.edge_responses[spec_num])))
+        if edge_effects == true
+            edge_penalty = (1 - (edge_weight * (1 - edge_responses)))
         end
         
         #* Store growth penalty history for suppression mortality
@@ -39,25 +50,25 @@ module demog_funcs
             agent.previous_growth = agent.previous_growth[1:5]
         end
 
-        if agent.growth_form == 1
-            dbh_increment = ((agent.dbh * model.g_jabowas[spec_num] * 
-                    (1 - (agent.dbh * agent.height) / (model.max_dbhs[spec_num] * model.max_heights[spec_num]))) /
-                (2.74 + 3 * model.b2_jabowas[spec_num] * agent.dbh - 4 * model.b3_jabowas[spec_num] * agent.dbh ^ 2))
+        if growth_form == 1
+            dbh_increment = ((dbh * g_jabowas * 
+                    (1 - (dbh * height) / (max_dbhs * max_heights))) /
+                (2.74 + 3 * b2_jabowas * dbh - 4 * b3_jabowas * dbh ^ 2))
 
             agent.dbh += (dbh_increment * competitive_penalty * edge_penalty)
-            agent.height = (1.37 + (model.b2_jabowas[spec_num] * agent.dbh) - 
-                (model.b3_jabowas[spec_num] * agent.dbh * agent.dbh))
+            agent.height = (1.37 + (b2_jabowas * agent.dbh) - 
+                (b3_jabowas * agent.dbh * agent.dbh))
 
-        elseif agent.growth_form == 2
+        elseif growth_form == 2
             a_tf_height = 0.05289
             b_tf_height = -0.05695
 
-            hgt_increment = a_tf_height * exp(agent.height * b_tf_height)
+            hgt_increment = a_tf_height * exp(height * b_tf_height)
             
             agent.height += (hgt_increment * competitive_penalty * edge_penalty)
 
         else
-            error("""The growth form $agent.growth_form is undefined, 
+            error("""The growth form is undefined, 
                      please check species demography data""")
         end
     end

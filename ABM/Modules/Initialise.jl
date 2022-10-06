@@ -246,11 +246,13 @@ module Setup
         #! does not seem to function.
         pcors = model.pcor
         nhb_sets = model.nhb_set
+        crit_heights = range(0, 32, step = 4)
+
         for i in 1:num_positions
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
                                                                                grid,#collect(positions(model)),
-                                                                               range(0, 32, step = 4),
+                                                                               crit_heights,#range(0, 32, step = 4),
                                                                                Int64(max_shell))
 
             n_ids = Int64[]
@@ -263,8 +265,6 @@ module Setup
         
         return model
     end
-
-    #// Define patches
 
     function assign_demographic(
         model,
