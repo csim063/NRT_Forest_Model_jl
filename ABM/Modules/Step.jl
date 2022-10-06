@@ -210,19 +210,7 @@ module go
                 )
         end
 
-        # for a in 1:length(model.new_agents_list)
-        #     add_agent_single!(
-        #         model,
-        #         model.new_agents_list[a][1], 
-        #         model.new_agents_list[a][2],
-        #         model.new_agents_list[a][3], 
-        #         model.new_agents_list[a][4], 
-        #         model.new_agents_list[a][5], 
-        #         model.new_agents_list[a][6], 
-        #         Float64[]
-        #         )
-        # end
-        model.new_agents_list = Any[] #TODO type list
+        model.new_agents_list = Any[]
 
         for p in eachindex(grid)
             a_id = id_in_position(p, model::ABM{<:GridSpaceSingle})
