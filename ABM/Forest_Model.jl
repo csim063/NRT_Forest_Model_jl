@@ -32,7 +32,7 @@ site_df = DataFrame(CSV.File("Data/forest.txt"));
 ## First setup the dataframe where data will be saved
 adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
 
-model = Setup.forest_model(forest_area = 1,
+model = Setup.forest_model(forest_area = 4,
                            cell_grain = 4, 
                            n_species = 8,
                            edge_strength = 0.0,
@@ -57,12 +57,17 @@ model = Setup.forest_model(forest_area = 1,
 #% Step model
 #step!(model, go.agent_step!, go.model_step!, 1)
 data, _ = run!(model, go.agent_step!, go.model_step!, 50; adata = adata, when = [5]);
-run!(model, go.agent_step!, go.model_step!, 10)
+run!(model, go.agent_step!, go.model_step!, 5)
 # data[1:100, :]
 
 # Quick and dirty performance benchmarking
-#@time run!(model, go.agent_step!, go.model_step!, 5);
+@time run!(model, go.agent_step!, go.model_step!, 25);
 
+# Proper profiling of code
+#! Remember to have run init and run at least once before profiling to avoid measuring compilation
+#using Profile
+#@profile run!(model, go.agent_step!, go.model_step!, 50)
+@profview run!(model, go.agent_step!, go.model_step!, 150)
 #//---------------------------------------------------------------------------#
 #% Visualise
 cols = palette("Spectral", nrow(site_df));
