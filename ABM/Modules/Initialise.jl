@@ -68,7 +68,7 @@ module Setup
 
         edge_responses = demography_df.edge_response
 
-        b2_jabowas = (2 * (max_heights .- 1.37)) ./ max_dbhs #*Based on equation from Botkin 2001
+        b2_jabowas = (2 .* (max_heights .- 1.37)) ./ max_dbhs #*Based on equation from Botkin 2001
         b3_jabowas = ((max_heights .- 1.37) ./ (max_dbhs).^2) #*Based on equation from Botkin 2001
 
         repro_ages = demography_df.repro_age
@@ -206,7 +206,7 @@ module Setup
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
             # Column 1 is species column 2 is initial abundance
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
-            patch_here_ID = model.patch_ID[p]
+            #patch_here_ID = model.patch_ID[p]
 
             grow_form = demography_df.growth_form[specID]
 
@@ -217,7 +217,7 @@ module Setup
 
             add_agent!(grid[p], model, 
                 specID, 
-                patch_here_ID,
+                p,#patch_here_ID,
                 grow_form, 
                 agent_demog[1], #height
                 agent_demog[2], #dbh
@@ -228,7 +228,7 @@ module Setup
             ## Update patch level properties
             e_dist = minimum(grid[p] .- minimum(positions(model)))
             #! Note I have renamed edge-b2 as edge_strength
-            weight = edge_b1 * exp(-edge_strength * e_dist) + edge_b0
+            weight = edge_b1 .* exp(-edge_strength .* e_dist) .+ edge_b0
             model.edge_weight[p] = weight
 
             model.nhb_set[p] = collect(nearby_positions(grid[p], 
@@ -244,16 +244,18 @@ module Setup
         #! seem to run sequentially but rather all together, hence the ability to assign a function
         #! after calling it but this means trying to get nhb_set in the same loop they are assigned 
         #! does not seem to function.
+        pcors = model.pcor
+        nhb_sets = model.nhb_set
         for i in 1:num_positions
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
-                                                                               collect(positions(model)),
+                                                                               grid,#collect(positions(model)),
                                                                                range(0, 32, step = 4),
                                                                                Int64(max_shell))
 
             n_ids = Int64[]
-            for n in model.nhb_set[i]
-                n_id = findfirst(isequal([n]), model.pcor)
+            for n in nhb_sets[i]
+                n_id = findfirst(isequal([n]), pcors)
                 push!(n_ids, n_id)
             end
             model.nhb_set_ids[i] = n_ids
