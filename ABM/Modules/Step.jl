@@ -8,13 +8,14 @@ module go
     using StatsBase
     using DataFrames
     using Distributions
-    #using Shuffle
 
     include("Disturbance_functions.jl")
     include("Demographic_functions.jl")
     include("Helper_functions.jl")
     
+    
     #TODO ORDERS MAY BE ODD WITH AGENT AND MODEL STEPS SPLITTING GO FUNCTION
+    #//-------------------------------------------------------------------------------------------#
     #%This is the step function for the individual trees (no globals changed) 
     #* RUN ONCE PER AGENT PER CALL (I.E. Multiple times per tick if multiple agents)
     """
@@ -46,7 +47,7 @@ module go
         b3_jabowa = b3_jabowas[spec_num]
         max_dbh = max_dbhs[spec_num]
         max_height = max_heights[spec_num]
-        
+
         demog_funcs.grow(agent, 
                         shade_height,
                         agent.height,
@@ -72,7 +73,6 @@ module go
             r_hgt = model.regen_heights[agent.species_ID]
             seedlings = model.seedlings
             if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
-                #nhbs = model.nhb_set[agent.patch_here_ID]
                 nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
 
                 demog_funcs.nhb_dispersal(model,
@@ -137,6 +137,8 @@ module go
 
     end
 
+
+    #//-------------------------------------------------------------------------------------------#
     #%This is the step function for global level changes e.g. ticks
     #* RUN ONCE PER MODEL PER CALL (I.E. ONCE PER TICK)
     """
@@ -272,8 +274,6 @@ module go
         end
 
         model.max_density = maximum(sapling_density)
-
-
 
         set_get_functions.update_abundances(model, n_species)
 

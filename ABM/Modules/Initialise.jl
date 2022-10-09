@@ -8,12 +8,15 @@ module Setup
     using StatsBase
     using DataFrames
 
-    #% Helper functions
+    #% HELPER FUNCTIONS
     include("Helper_functions.jl")
     include("Demographic_assignments.jl")
 
-    #% Define agents
-    #? Maybe a dict of species key value pairs could be useful
+    #//-------------------------------------------------------------------------------------------#
+    #% DEFINE AGENTS
+    """
+    TODO BRIEFLY EXPLAIN AGENTS
+    """
     @agent Tree GridAgent{2} begin 
         species_ID::Int
         patch_here_ID::Int
@@ -24,7 +27,11 @@ module Setup
         previous_growth::Array
     end
 
-    #% Define world
+    #//-------------------------------------------------------------------------------------------#
+    #% DEFINE WORLD
+    """
+    TODO EXPLAIN FOREST MODEL FUNCTION
+    """
     function forest_model(;
         forest_area = 16,
         cell_grain = 4,
@@ -45,11 +52,11 @@ module Setup
         macro_litter_effect = 0.10,
         ddm = false,
         restoration_planting = false,
-        planting_frequency = 10)
-        
-        #? Could we define space as many dimensional and just add the properties like height
-        #? and species present to this
-        ## Define globals
+        planting_frequency = 10
+        )
+
+
+        ###-------------------------DEFINE PROPERTY VARIABLES-------------------------###
         dims = trunc(Int, (sqrt(forest_area * 1e4)) / cell_grain)
 
         space = GridSpaceSingle((dims, dims); periodic = false, metric = :chebyshev);
@@ -113,7 +120,9 @@ module Setup
 
         saplings_to_plant = Int64[1,0,1,0,0,1,0,0]
 
+        ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
         properties = Dict(
+            #% PATCH VARIABLES----------------------------#
             :patch_ID => zeros(Int64, prod((dims, dims))),
             :pcor => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
             :seedlings => fill(Int64[], prod((dims, dims))),
@@ -133,7 +142,7 @@ module Setup
             :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
             :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
             :expand => falses(prod((dims, dims))),
-            #%Globals
+            #% GLOBAL VARIABLES---------------------------#
             :tick => zero(1),
             :n_species => n_species::Int64,
             :seedling_survival => seedling_survival::Vector{Float64},
@@ -169,7 +178,7 @@ module Setup
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
             :max_density => sap_density::Int64,
             :new_agents_list => Any[],
-            #%User inputs
+            #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,
             :max_disturb_size => max_disturb_size::Float64,
@@ -185,17 +194,19 @@ module Setup
             :restoration_planting => restoration_planting::Bool,
             :planting_frequency => planting_frequency::Int64
         )
-        #TODO Give some thought as to the most efficient scheduler to use
+
+        ###------------------------------CREATE THE MODEL-----------------------------###
         model = ABM(Tree, space; 
             properties,
             rng,
             scheduler = Schedulers.fastest)
 
-        ## Populate the world with adult tree agents
         grid = collect(positions(model))
         num_positions = prod((dims, dims))
 
-        #Make for loop that samples a proportion of space and allocates each species
+        ###-----------------UPDATE INITIAL PATCH VALUES TO TRUE VALUES----------------###
+        #*For loop runs across all patches and calculates the correct values for each
+        #* patch variable
         for p in 1:num_positions
             model.patch_ID[p] = p
             model.pcor[p] = grid[[p]]
@@ -204,20 +215,20 @@ module Setup
             model.saplings[p] = copy(sap_list)
 
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
-            # Column 1 is species column 2 is initial abundance
+            #! Column 1 is species column 2 is initial abundance
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
-            #patch_here_ID = model.patch_ID[p]
 
             grow_form = demography_df.growth_form[specID]
 
-            ## Get height dbh and age
+            #% ADD A SINGLE UNIQUE AGENT TO THE PATCH-------------------------#
+            #*Use custom function to generate agent dbh, age, and height
             agent_demog = assign_demographic(model,
                                              specID, 
                                              site_df)
-
+            
             add_agent!(grid[p], model, 
                 specID, 
-                p,#patch_here_ID,
+                p, #patch_here_ID,
                 grow_form, 
                 agent_demog[1], #height
                 agent_demog[2], #dbh
@@ -225,9 +236,10 @@ module Setup
                 Float64[]
                 )
 
-            ## Update patch level properties
+            #% UPDATE PATCH LEVEL PROPERTIES----------------------------------#
+            ## calculate edge distance
             e_dist = minimum(grid[p] .- minimum(positions(model)))
-            #! Note I have renamed edge-b2 as edge_strength
+            #! Note I have renamed edge-b2 from Netlogo to edge_strength
             weight = edge_b1 .* exp(-edge_strength .* e_dist) .+ edge_b0
             model.edge_weight[p] = weight
 
@@ -240,6 +252,7 @@ module Setup
                                                                         1)))
         end
 
+        ###----------------------------UPDATE SECOND STAGE VARIABLES----------------------------###
         #! Note we have a second loop to assign some features as by default things in Julia do not
         #! seem to run sequentially but rather all together, hence the ability to assign a function
         #! after calling it but this means trying to get nhb_set in the same loop they are assigned 
@@ -251,8 +264,8 @@ module Setup
         for i in 1:num_positions
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
-                                                                               grid,#collect(positions(model)),
-                                                                               crit_heights,#range(0, 32, step = 4),
+                                                                               grid,
+                                                                               crit_heights,
                                                                                Int64(max_shell))
 
             n_ids = Int64[]
@@ -266,12 +279,18 @@ module Setup
         return model
     end
 
+
+    #//-------------------------------------------------------------------------------------------#
+    #% CALCULATE AGENT DEMOGRAPHIC VALUES FUNCTION
+    """
+    TODO EXPLAIN FUNCTION
+    """
     function assign_demographic(
         model,
         species::Integer,
         site_df = site_df
     )
-        ## Define species charatecteristics
+        ###-----------------DEFINE SPECIES CHARACTERISTICS------------------###
         growth_form = model.growth_forms[species]
 
         max_height_frac = site_df.max_init_hgt[species]
@@ -286,18 +305,18 @@ module Setup
         b3_jabowa = model.b3_jabowas[species]
         g_jabowa = model.g_jabowas[species]
 
-        ## Define behaviour for trees (growth form 1)
+        #% DEFINE BEHAVIOUR FOR TREES (GROWTH FORM 1)---------------#
         if growth_form == 1
-            # Define initial DBH
+            ## Define initial DBH
             dbh = min(rand(distribution_functions.generate_LogNormal(start_dbh,
                                                                      start_dbh_sd), 1)[1], 
                 (max_height_frac * max_dbh))
             dbh = max(0.01, dbh)
 
-            # Define initial height
+            ## Define initial height
             height = 1.37 + (b2_jabowa * dbh) - (b3_jabowa * dbh * dbh)
 
-            # Define initial age
+            ## Define initial age
             age = demog_metrics.age_by_dbh(
                 height, 
                 dbh,
@@ -309,26 +328,30 @@ module Setup
             )
 
 
-        #* Define behaviour for tree ferns (growth form 2)
+        #% DEFINE BEHAVIOUR FOR TREE FERNS (GROWTH FORM 2)----------#
         elseif growth_form == 2
-            #? Is this actually the correct calculation
+            ## Define initial height
             height = min(rand(distribution_functions.generate_LogNormal(start_dbh,
                                                                         start_dbh_sd), 1)[1], 
                     (max_height_frac * max_height))
+            
+            #* Ensure height is non-negative    
             height = height < 0 ? 1.5 : height
 
-            ## TODO This hard coding seems odd
+            ## Define initial DBH (Note this is a staitc value)
             dbh = 0.1
 
+            ## Define initial age
             age = demog_metrics.age_by_height(
                 height
             )
 
-        #* If growth form is not of known type send an error message
+        # If growth form is not of known type send an error message
         else
             error("The growth form $growth_form is undefined, please check species demography data")
         end
 
+        #! Note order of output is important as it is used implicitly throughout model
         return(height, dbh, age)
     end
 end

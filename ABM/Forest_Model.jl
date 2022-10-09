@@ -22,12 +22,12 @@ using CairoMakie
 include("Modules/Initialise.jl")
 include("Modules/Step.jl")
 
-#//---------------------------------------------------------------------------#
+#//-----------------------------------------------------------------------------------------------#
 #% Import data from files
 demography_df = DataFrame(CSV.File("Data/demography.txt"));
 site_df = DataFrame(CSV.File("Data/forest.txt"));
 
-#//---------------------------------------------------------------------------#
+#//-----------------------------------------------------------------------------------------------#
 #% Setup model
 ## First setup the dataframe where data will be saved
 adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
@@ -53,7 +53,7 @@ model = Setup.forest_model(forest_area = 4,
                            planting_frequency = 10
                            );
 
-#//---------------------------------------------------------------------------#
+#//-----------------------------------------------------------------------------------------------#
 #% Step model
 #step!(model, go.agent_step!, go.model_step!, 1)
 data, _ = run!(model, go.agent_step!, go.model_step!, 50; adata = adata, when = [5]);
@@ -68,7 +68,8 @@ run!(model, go.agent_step!, go.model_step!, 5)
 #using Profile
 #@profile run!(model, go.agent_step!, go.model_step!, 50)
 @profview run!(model, go.agent_step!, go.model_step!, 150)
-#//---------------------------------------------------------------------------#
+
+#//-----------------------------------------------------------------------------------------------#
 #% Visualise
 cols = palette("Spectral", nrow(site_df));
 speciescolor(a) = a.species_ID == 0 ? :white : cols[a.species_ID];
@@ -97,6 +98,7 @@ params = Dict(
         :planting_frequency => 1:1:10
 );
 
+##---------------------------------------------##
 #* Static plot
 fig, ax, abmobs  = abmplot(model;
         ac = speciescolor,
@@ -106,6 +108,7 @@ fig, ax, abmobs  = abmplot(model;
 )
 fig
 
+##---------------------------------------------##
 #* Interactive plot
 using GLMakie
 
@@ -116,6 +119,7 @@ fig, ax, abmobs = abmplot(model;
                 plotkwargs...);
 fig
 
+##---------------------------------------------##
 #* Exploration plot
 using Statistics: mean
 Tawa(a) = a.species_ID == :1
@@ -137,6 +141,7 @@ fig, abmobs = abmexploration(model;
                 mdata, mlabels = ["Seedlings", "Saplings"]);
 fig
 
+##---------------------------------------------##
 #* Video
 abmvideo(
         "./Outputs/Videos/Development.mp4",
@@ -144,5 +149,6 @@ abmvideo(
         title ="Development", frames = 500,
         plotkwargs...
 )
-#//---------------------------------------------------------------------------#
+
+#//-----------------------------------------------------------------------------------------------#
 #% Export data
