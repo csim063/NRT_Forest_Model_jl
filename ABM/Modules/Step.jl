@@ -117,23 +117,25 @@ module go
             demog_funcs.macro_litter_fall(agent, model)
         end
 
-        demog_funcs.death(agent, 
-                          model,
-                          cell,
-                          model.ddm,
-                          spec_num,
-                          model.base_mortality,
-                          model.gap_maker,
-                          model.expand,
-                          model.previous_species,
-                          model.previous_height,
-                          agent.height,
-                          agent.id,
-                          age,
-                          agent.previous_growth,
-                          model.supp_tolerance,
-                          model.supp_mortality
-                          )
+        if agent.age ≥ 2.0
+            demog_funcs.death(agent, 
+                                model,
+                                cell,
+                                model.ddm,
+                                spec_num,
+                                model.base_mortality,
+                                model.gap_maker,
+                                model.expand,
+                                model.previous_species,
+                                model.previous_height,
+                                agent.height,
+                                agent.id,
+                                age,
+                                agent.previous_growth,
+                                model.supp_tolerance,
+                                model.supp_mortality
+                                )
+        end
 
     end
 
@@ -186,6 +188,7 @@ module go
                 demog_funcs.expand_gap(i, 
                                        model,
                                        grid)
+                model.expand[i] = false
             end
 
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 

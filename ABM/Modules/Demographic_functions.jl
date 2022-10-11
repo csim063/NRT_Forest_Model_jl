@@ -288,7 +288,6 @@ module demog_funcs
             previous_species[cell] = species_ID
             previous_height[cell] = a_height
 
-            #model.total_deaths += 1
             kill_agent!(id, model)
             return
 
@@ -307,7 +306,6 @@ module demog_funcs
             previous_species[cell] = species_ID
             previous_height[cell] = a_height
 
-            #model.total_deaths += 1
             kill_agent!(id, model)
             return
         end

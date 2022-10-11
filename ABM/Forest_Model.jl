@@ -61,7 +61,7 @@ run!(model, go.agent_step!, go.model_step!, 5)
 # data[1:100, :]
 
 # Quick and dirty performance benchmarking
-@time run!(model, go.agent_step!, go.model_step!, 25);
+@time run!(model, go.agent_step!, go.model_step!, 100);
 
 # Proper profiling of code
 #! Remember to have run init and run at least once before profiling to avoid measuring compilation
