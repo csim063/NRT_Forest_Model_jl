@@ -117,7 +117,7 @@ module go
             demog_funcs.macro_litter_fall(agent, model)
         end
 
-        if agent.age ≥ 2.0
+        if agent.age ≥ 1.0
             demog_funcs.death(agent, 
                                 model,
                                 cell,
@@ -166,7 +166,6 @@ module go
                                                   model.max_disturb_size,
                                                   model.nhb_set_ids,
                                                   model.close_nhbs_count,
-                                                  model.pcor,
                                                   model.patch_ID,
                                                   n_species,
                                                   seedlings,

@@ -357,7 +357,7 @@ module demog_funcs
         pcor::Vector{Vector{Tuple{Int64, Int64}}}
     )
         seedlings = seedlings[cell_ID]
-        saplings = saplings[cell_ID]    
+        saplings = saplings[cell_ID] 
 
         #? 0.25 is probability of one sapling becoming an adult
         if sum(saplings[1]) >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings[1])))
