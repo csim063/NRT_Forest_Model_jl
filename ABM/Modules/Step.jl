@@ -13,8 +13,6 @@ module go
     include("Demographic_functions.jl")
     include("Helper_functions.jl")
     
-    
-    #TODO ORDERS MAY BE ODD WITH AGENT AND MODEL STEPS SPLITTING GO FUNCTION
     #//-------------------------------------------------------------------------------------------#
     #%This is the step function for the individual trees (no globals changed) 
     #* RUN ONCE PER AGENT PER CALL (I.E. Multiple times per tick if multiple agents)
@@ -137,7 +135,6 @@ module go
         end
 
     end
-
 
     #//-------------------------------------------------------------------------------------------#
     #%This is the step function for global level changes e.g. ticks
@@ -268,7 +265,7 @@ module go
                                             seedling_mortality,
                                             sapling_mortality,
                                             seedling_transition)
-            #TODO may be quicker to have a calc density function
+                                            
             seedling_density[i] = sum(seedlings[i])
             sapling_density[i] = sum(saplings[i])
         end

@@ -1,6 +1,8 @@
 """
-Module contains all of the functions required to setup the model at the start
-of a run
+Module primarily contains the function to defiine the agents and setup the model for the ABM. 
+Additional miscellaneous helper functions only useful to the setup of the model are also contained
+in this module. The code contained in this module can be thought of as equivalent to the setup
+function/button of NetLogo.
 """
 module Setup
     using Agents
@@ -15,7 +17,21 @@ module Setup
     #//-------------------------------------------------------------------------------------------#
     #% DEFINE AGENTS
     """
-    TODO BRIEFLY EXPLAIN AGENTS
+    This specialised function is defined by Agents.jl itself (see 
+    https://juliadynamics.github.io/Agents.jl/stable/api/#Agents.@agent). The function creates and
+    defines the agents, referred to as Trees, for the model. They are defined as GridAgents{2} 
+    meaning they must be placed and behave on a 2D grid model. Agents have two inbuilt properties 
+    and seven custom properties. These are:
+    - `id::Int`: Unique agent ID.
+    - `pos::NTuple{2, Int}`: Coordinates of agent.
+    - `species_ID::Int`: Value indicating what tree species the agent is.
+    - `patch_here_ID::Int`: Patch ID of the cell the agent is currently on.
+    - `growth_form::Int`: Growth type of agent, 1 = trees; 2 = tree ferns.
+    - `height::Float64`: Height in meters of agent.
+    - `dbh::Float64`: Diameter at breast height in meters of agent.
+    - `age::Float64`: Age (number of ticks) agent has been alive
+    - `previous_growth::Array`: Growth penalty list for the last 5 ticks worth of growth 
+    suppression experienced by the agent
     """
     @agent Tree GridAgent{2} begin 
         species_ID::Int
@@ -30,38 +46,66 @@ module Setup
     #//-------------------------------------------------------------------------------------------#
     #% DEFINE WORLD
     """
-    TODO EXPLAIN FOREST MODEL FUNCTION
+    This is the primary setup function. It defines all the values of the model, including the 
+    dimensions and properties of the space, the inital parameter values for all cells and agents, 
+    and even the scheduler for undertaking agent behaviours.
+
+    User inputs:
+    - `forest_area::Int64`: Size in hectares of the modelled habitat patch
+    - `cell_grain::Int64`: Size in meters of an individual cell in the model (cell_grain x cell_grain)
+    - `n_species::Int64`: Number of species modelled
+    - `edge_strength::Float64`: Value which determines over what distance edge effects occur (0-1)
+    - `max_shade_distance::Int64`: Maximum distance over which shading from neighbours can occur
+    - `site_df::DataFrame`: Data defining the initial site properties to be modelled
+    - `demography_df::DataFrame`: Species specific demography values for the species to be modelled
+    - `seed::Int64`: Random seed value to allow for repeatability
+    - `disturb_freq::Float64`: Probaility of a disturbance occurring in a tick
+    - `max_disturb_size::Float64`: Maximum proportion of patch that may be impacted by a single disturbance
+    - `comp_multiplier::Float64`: Constant impacting the strength of competition that each species 
+            experiences. This constant is α in α * (height / shade_height) ^ 0.5 based on 
+            Dislich et *al* 2009.
+    - `edge_effects::Bool`: Whether to include for edge effects or not
+    - `external_rain::Bool`: Whether to have seeds disperse into patch from beyond the patch
+    - `ext_dispersal_scenario::String`: Whether to assign external seeds to each species equally
+        ("equal") or by abundance ("abundance")
+    - `herbivory::Bool`: Whether to include for herbivory effects or not
+    - `saplings_eaten::Bool`: Whether saplings are impacted by herbivory or not
+    - `macro_litter_effect::Float64`: Probability of a sapling being killed by a macro-litter fall
+    - `ddm::Bool`: Whether to include density dependent mortality or not
+    - `restoration_planting::Bool`: Whether to include restoration planting or not
+    - `planting_frequency::Int64`: How often (how many ticks) does restoration planting occur
     """
     function forest_model(;
-        forest_area = 16,
-        cell_grain = 4,
-        n_species = 8,
-        edge_strength = 0.0,
-        max_shade_distance = 32,
-        site_df = site_df,
-        demography_df = demography_df,
-        seed = 999,
-        disturb_freq = 0.100,
-        max_disturb_size = 0.40,
-        comp_multiplier = 1.60,
-        edge_effects = false,
-        external_rain = false,
-        ext_dispersal_scenario = "equal",
-        herbivory = false,
-        saplings_eaten = false,
-        macro_litter_effect = 0.10,
-        ddm = false,
-        restoration_planting = false,
-        planting_frequency = 10
+        forest_area::Int64 = 16,
+        cell_grain::Int64 = 4,
+        n_species::Int64 = 8,
+        edge_strength::Float64 = 0.0,
+        max_shade_distance::Int64 = 32,
+        site_df::DataFrame = site_df,
+        demography_df::DataFrame = demography_df,
+        seed::Int64 = 999,
+        disturb_freq::Float64 = 0.100,
+        max_disturb_size::Float64 = 0.40,
+        comp_multiplier::Float64 = 1.60,
+        edge_effects::Bool = false,
+        external_rain::Bool = false,
+        ext_dispersal_scenario::String = "equal",
+        herbivory::Bool = false,
+        saplings_eaten::Bool = false,
+        macro_litter_effect::Float64 = 0.10,
+        ddm::Bool = false,
+        restoration_planting::Bool = false,
+        planting_frequency::Int64 = 10
         )
 
 
-        ###-------------------------DEFINE PROPERTY VARIABLES-------------------------###
+        ###--------------------------------DEFINE SPACE--------------------------------###
         dims = trunc(Int, (sqrt(forest_area * 1e4)) / cell_grain)
 
         space = GridSpaceSingle((dims, dims); periodic = false, metric = :chebyshev);
         rng = MersenneTwister(seed)
 
+        ###-------------------------DEFINE PROPERTY VARIABLES-------------------------###
         seedling_survival = demography_df.seedling_survival
         sapling_survival = demography_df.sapling_survival
         seedling_transition = demography_df.seedling_transition
@@ -75,8 +119,9 @@ module Setup
 
         edge_responses = demography_df.edge_response
 
-        b2_jabowas = (2 .* (max_heights .- 1.37)) ./ max_dbhs #*Based on equation from Botkin 2001
-        b3_jabowas = ((max_heights .- 1.37) ./ (max_dbhs).^2) #*Based on equation from Botkin 2001
+        #*Based on equations from Botkin et al. (1972)
+        b2_jabowas = (2 .* (max_heights .- 1.37)) ./ max_dbhs 
+        b3_jabowas = ((max_heights .- 1.37) ./ (max_dbhs).^2) 
 
         repro_ages = demography_df.repro_age
         repro_heights = demography_df.repro_height
@@ -196,6 +241,8 @@ module Setup
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
+        #! Note the type of scheduler can have a large impact on the speed and behaviour
+        #! of the final model
         model = ABM(Tree, space; 
             properties,
             rng,
@@ -237,7 +284,7 @@ module Setup
                 )
 
             #% UPDATE PATCH LEVEL PROPERTIES----------------------------------#
-            ## calculate edge distance
+            #* calculate edge distance
             e_dist = minimum(grid[p] .- minimum(positions(model)))
             #! Note I have renamed edge-b2 from Netlogo to edge_strength
             weight = edge_b1 .* exp(-edge_strength .* e_dist) .+ edge_b0
@@ -283,12 +330,19 @@ module Setup
     #//-------------------------------------------------------------------------------------------#
     #% CALCULATE AGENT DEMOGRAPHIC VALUES FUNCTION
     """
-    TODO EXPLAIN FUNCTION
+    # Report agent demographic parameters
+    Function calculates an initial diameter at breast height, height and age for an agent based
+    on the agents species.
+    ## Arguments:
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `species::Integer`: Selected species ID.
+    - `site_df::DataFrame`: Data defining the initial site properties to be modelled
     """
     function assign_demographic(
         model,
         species::Integer,
-        site_df = site_df
+        site_df::DataFrame = site_df
     )
         ###-----------------DEFINE SPECIES CHARACTERISTICS------------------###
         growth_form = model.growth_forms[species]
