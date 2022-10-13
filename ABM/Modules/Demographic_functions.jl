@@ -5,6 +5,7 @@ module demog_funcs
     using StatsBase
     using Distributions
 
+    #* CUSTOM MODULES
     include("Helper_functions.jl")
 
     #//-------------------------------------------------------------------------------------------#

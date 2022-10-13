@@ -10,7 +10,7 @@ module Setup
     using StatsBase
     using DataFrames
 
-    #% HELPER FUNCTIONS
+    #* CUSTOM MODULES
     include("Helper_functions.jl")
     include("Demographic_assignments.jl")
 
