@@ -243,7 +243,7 @@ module set_get_functions
     - `r_hgt::Int64`: Regeneration height in meters for selected species
     - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
     model grid.
-    - `spec_ID::Int64`: Selected species ID
+    - `spec_ID::Int64`: Selected species ID.
     ## Examples
     ```julia-repl
     julia> assign_seedling(23,

@@ -11,7 +11,8 @@ module disturbance_functions
     #% LANDSCAPE LEVEL DISTURBANCE
     """ 
     # Landscape disturbances
-    Function implements landscape disturbances which spread percolation
+    Function implements landscape disturbances which spread via percolation. This could be 
+    considered a disturbance such as fire.
     ## Arguments:
     - `model`: The AgentBasedModel object defining the current model. This object is usually 
     created using `Agents.ABM()`.

@@ -92,8 +92,7 @@ module go
             end
 
             ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
-            demog_funcs.ldd_within(agent, 
-                                   model,
+            demog_funcs.ldd_within(model,
                                    sp,
                                    ldd_disp_frac,
                                    ldd_disp_dist,
@@ -221,8 +220,7 @@ module go
                                     model.b3_jabowas,
                                     model.last_change_tick,
                                     tick,
-                                    model.n_changes,
-                                    model.pcor)
+                                    model.n_changes)
         end
 
         count_ep = min(length(collect(empty_positions(model))),
