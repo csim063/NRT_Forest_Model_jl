@@ -235,9 +235,10 @@ module go
         end 
 
         empty_patches = Random.shuffle!(empty_patches)
-        for p in eachindex(collect(copy(empty_patches)))
-            cell_ID =[p]
-            demog_funcs.capture_gap(cell_ID, 
+        for p in copy(empty_patches)
+            cell_ID = findfirst(isequal([p]), model.pcor)
+
+            demog_funcs.capture_gap([cell_ID], 
                                     model, 
                                     seedlings,
                                     saplings,
@@ -261,16 +262,19 @@ module go
         for e in 1:count_ep
             idx = idxs[e]
             pos = empty_patches[idx]
-            add_agent!(pos,
-                model,
-                model.new_agents_list[idx][1], 
-                model.new_agents_list[idx][2],
-                model.new_agents_list[idx][3], 
-                model.new_agents_list[idx][4], 
-                model.new_agents_list[idx][5], 
-                model.new_agents_list[idx][6], 
-                Float64[]
-                )
+
+            if isempty(pos, model) == true
+                add_agent!(pos,
+                    model,
+                    model.new_agents_list[idx][1], 
+                    model.new_agents_list[idx][2],
+                    model.new_agents_list[idx][3], 
+                    model.new_agents_list[idx][4], 
+                    model.new_agents_list[idx][5], 
+                    model.new_agents_list[idx][6], 
+                    Float64[]
+                    )
+            end
         end
 
         model.new_agents_list = Any[]
