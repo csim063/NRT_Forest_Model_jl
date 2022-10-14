@@ -5,179 +5,358 @@ module demog_funcs
     using StatsBase
     using Distributions
 
+    #* CUSTOM MODULES
     include("Helper_functions.jl")
 
+    #//-------------------------------------------------------------------------------------------#
+    #% GROW
     """
-    Grow each tree following basic equations of Botkin et al. (1972) JABOWA
-    down-weight based on relative hgt of cell (following Dislich et al. 2009)
+    # Grow
+    Have each tree grow, i.e. increase their age, height and diameter at breast height. Every tree
+    increases their age by 1 every tick and their height and DBH are incremented based upon their
+    growth form (either tree or tree-fern) and basic demography equations from Botkin et *al* (1972)
+    and Brock et *al* (2019). The incremental growth in height and DBH is down-weighted based on the
+    relative amount of shading (due to the height) from neighbouring cells (following Dislich et 
+    *al* 2009).
+    ## References:
+    - Botkin, D.B., Janak, J.F., Wallis, J.R., 1972. Some ecological consequences of acomputer model 
+    of forest growth. J. Ecol. 60, 849-872.
+    - Dislich, C., Günter, S., Homeier, J., Schröder, B., & Huth, A. (2009). Simulating Forest 
+    Dynamics of a Tropical Montane Forest in South Ecuador. Erdkunde, 63(4), 347-364.
+    - Brock, J. M. R., Morales, N. S., Burns, B. R., & Perry, G. L. W. (2019). The hare, tortoise 
+    and crocodile revisited: Tree fern facilitation of conifer persistence and angiosperm growth in 
+    simulated forests. The Journal of Ecology, 108(3), 969-981.
+    ## Arguments:
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model. Note agent must exist (i.e. not have died).
+    - `shade_height::Float64`: Mean weighted height of neighbouring trees as calculated by
+    `get_nhb_shade_height()`.
+    - `height::Float64`: Height in meters of tree.
+    - `comp_multiplier::Float64`: Constant impacting the strength of competition that each species 
+    experiences. This constant is α in α * (height / shade_height) ^ 0.5 based on Dislich et 
+    *al* 2009.
+    - `edge_effects::Bool`: Boolean determining whether trees are impacted by edge effects or not.
+    - `edge_weight::Float64`: The strength of the edge effect relative to the distance from the 
+    edge.
+    - `edge_responses::Float64`: Value between 0 and 1 representing how well a species is adapted to 
+    edge environments
+    - `growth_form::Int64`: Growth type of agent, 1 = trees; 2 = tree ferns.
+    - `dbh::Float64`: Diameter at breast height in meters of tree.
+    - `g_jabowas::Float64`: Species-specific allometric constant defined by Botkin et *al* (1972).
+    - `b2_jabowas::Float64`: Species-specific allometric constant defined by Botkin et *al* (1972)
+    defined as `2 * (max_height - 1.37) / max_dbh` where 1.37 is the smallest adult tree height.
+    - `b3_jabowas::Float64`: Species-specific allometric constant defined by Botkin et *al* (1972)
+    defined as `(max_height - 1.37) / max_dbh ^ 2` where 1.37 is the smallest adult tree height.
+    - `max_dbhs::Float64`: Species-specific maximum attainable diameter at breast height (m).
+    - `max_heights::Int64`: Species-specific maximum attainable height (m).
     """
     function grow(
         agent,
-        model
+        shade_height::Float64,
+        height::Float64,
+        comp_multiplier::Float64,
+        edge_effects::Bool,
+        edge_weight::Float64,
+        edge_responses::Float64,
+        growth_form::Int64,
+        dbh::Float64,
+        g_jabowas::Float64,
+        b2_jabowas::Float64,
+        b3_jabowas::Float64,
+        max_dbhs::Float64,
+        max_heights::Int64
     )
-        spec_num = agent.species_ID
         agent.age += 1
 
-        #*Correct for nhb effects
+        #% CALCULATE COMPETITIVE PENALTY FROM NEIGHBOURS------------#
         competitive_penalty = 1
-        if model.nhb_shade_height[spec_num] ≥ agent.height
-            comp_val = Float64(abs(Complex(agent.height / model.nhb_shade_height[spec_num]) ^ 0.5))
-            competitive_penalty = min(1, (model.comp_multiplier * comp_val))
+        if shade_height ≥ height
+            comp_val = Float64(abs(Complex(height ./ shade_height) .^ 0.5))
+            competitive_penalty = min(1, (comp_multiplier .* comp_val))
         end
 
-        #* Account for edge effects if any
+        #% CALCULATE EDGE PENALTY-----------------------------------#
         edge_penalty = 1
-        if model.edge_effects == true
-            edge_penalty = (1 - (model.edge_weight[spec_num] * (1 - model.edge_responses[spec_num])))
+        if edge_effects == true
+            edge_penalty = (1 - (edge_weight * (1 - edge_responses)))
         end
         
-        #* Store growth penalty history for suppression mortality
-        #! NEED TO CONFIRM THIS IS NEEDED
+        #% CALCULATE OVERALL GROWTH PENALTY-------------------------#
+        #* Store growth penalty history for use
+        #* later in suppression mortality
         growth_reduction = competitive_penalty * edge_penalty
         prepend!(agent.previous_growth, growth_reduction)
-        #check if agent list longer than 5 if so select only the first 5
+
+        #* Only the last 5 ticks worth of growth suppression are 
+        #* stored
         if length(agent.previous_growth) > 5
             agent.previous_growth = agent.previous_growth[1:5]
         end
 
-        if agent.growth_form == 1
-            dbh_increment = ((agent.dbh * model.g_jabowas[spec_num] * 
-                    (1 - (agent.dbh * agent.height) / (model.max_dbhs[spec_num] * model.max_heights[spec_num]))) /
-                (2.74 + 3 * model.b2_jabowas[spec_num] * agent.dbh - 4 * model.b3_jabowas[spec_num] * agent.dbh ^ 2))
+        #% INCREMENT TREE HEIGHT AND DBH----------------------------#
+        # For trees
+        if growth_form == 1
+            #? Equations are based on Botkin et al (1972)
+            dbh_increment = ((dbh * g_jabowas * 
+                    (1 - (dbh * height) / (max_dbhs * max_heights))) /
+                (2.74 + 3 * b2_jabowas * dbh - 4 * b3_jabowas * dbh ^ 2))
 
+            #! Note change of scoping when assigning new values. This is done
+            #! to ensure values are updated in the global pool
             agent.dbh += (dbh_increment * competitive_penalty * edge_penalty)
-            agent.height = (1.37 + (model.b2_jabowas[spec_num] * agent.dbh) - 
-                (model.b3_jabowas[spec_num] * agent.dbh * agent.dbh))
-
-        elseif agent.growth_form == 2
+            agent.height = (1.37 + (b2_jabowas * agent.dbh) - 
+                (b3_jabowas * agent.dbh * agent.dbh))
+        
+        # For tree ferns
+        elseif growth_form == 2
+            #? Equations and values are based on Brock et al (2019)
             a_tf_height = 0.05289
             b_tf_height = -0.05695
 
-            hgt_increment = a_tf_height * exp(agent.height * b_tf_height)
+            hgt_increment = a_tf_height * exp(height * b_tf_height)
             
             agent.height += (hgt_increment * competitive_penalty * edge_penalty)
 
         else
-            error("""The growth form $agent.growth_form is undefined, 
+            error("""The growth form is undefined, 
                      please check species demography data""")
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% NEIGHBOURHOOD DISPERSAL
     """ 
-    Neighbourhood dispersal
+    # Neighbourhood dispersal
+    Seeds, represented as seedlings, are dispersed from target tree. Seeds are assumed to land 
+    under the crown of the target tree. The crown size of the tree is computed based about its 
+    diameter at breast height following a simplified allometric relationship from SORTIE-NZ
+    (Kunstler et *al*., 2009).
+    ## References:
+    - Kunstler, G., Coomes, D.A., Canham, C.D., 2009. Size-dependence of growth and mortality 
+    influence the shade tolerance of trees in a lowland temperate rain forest. J. Ecol. 97, 685-695. 
+    ## Arguments:
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `seed_production::Int64`: Species-specific constant value used within a Poisson distribution
+    to determine the number of seeds produced by an agent.
+    - `ldd_disp_frac::Float64`: Proportion of seedlings that undergo long-distance dispersal and are
+    therefore unavailable for neighbourhood dispersal.
+    - `r_hgt::Int64`: Regeneration height in meters for selected species.
+    - `dbh::Float64`: Diameter at breast height in meters of tree.
+    - `cell_grain::Int64`: The size of an individual cell in the model (cell_grain x cell_grain).
+    - `shell_layers::Int64`: Maximum distance at which neighbours may be considered to possibly fall
+    under the crown.
+    - `pos::Tuple{Int64,Int64}`: Coordinates of tree/agent.
+    - `nhbs_id::Vector{Int64}`: Patch IDs for all neighbouring cells of tree/agent.
+    - `shad_h::Vector{Float64}`: Mean shade heights as calculated by `get_nhb_shade_height()` for 
+    all cells in model grid.
+    - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
+    model grid.
+    - `spec_ID::Int64`: Selected species ID.
     """
     function nhb_dispersal(
-        agent,
-        model
+        model,
+        seed_production::Int64,
+        ldd_disp_frac::Float64,
+        r_hgt::Int64,
+        dbh::Float64,
+        cell_grain::Int64,
+        shell_layers::Int64,
+        pos::Tuple{Int64,Int64},
+        nhbs_id::Vector{Int64},
+        shad_h::Vector{Float64},
+        seedlings::Vector{Vector{Int64}},
+        spec_ID::Int64
     )
-        if model.seed_prod[agent.species_ID] > 0
-            n_seeds = trunc(Int, (rand(Poisson(model.seed_prod[agent.species_ID])) * 
-                        (1 - model.ldd_dispersal_fracs[agent.species_ID])))
-            
-            r_hgt = model.regen_heights[agent.species_ID]
-            
-            #? This is a simplified allometric relationship from SORTIE-NZ
-            cw = (0.284 * ((agent.dbh * 100) ^ 0.684))
-            shell_width = Int(min(ceil(cw / model.cell_grain), length(model.nhb_set[agent.species_ID])))
-            dispersal_nhb = model.nhb_set[agent.species_ID][1:shell_width]
-
-            for _ in 1:n_seeds
-                rand_cell = rand(rand(dispersal_nhb))
-                rand_cell_ID = findall(x->x==[rand_cell], model.pcor)[1]
-                
-                if model.nhb_shade_height[rand_cell_ID] ≤ r_hgt
-                    model.seedlings[rand_cell_ID][agent.species_ID] += 1
-                end
-            end
-        end
+        #% GENERATE SEEDS TO BE DISPERSED---------------------------#
+        n_seeds = trunc(Int, (rand(Poisson(seed_production)) * 
+                    (1 - ldd_disp_frac)))
+        
+        #% CALCULATE CROWN WIDTH AND NEIGHBOURS---------------------#
+        #? This is a simplified allometric relationship 
+        #?from SORTIE-NZ
+        cw = (0.284 .* ((dbh .* 100.0) .^ 0.654))
+        shell_width = Int64(min(ceil(cw ./ cell_grain), shell_layers))
+        nhb_count = length(collect(nearby_positions(pos, 
+                                                model::ABM{<:GridSpaceSingle}, 
+                                                shell_width)))
+        
+        #% ASSIGN LOCALLY DISPERSED SEEDS---------------------------#                                        
+        dispersal_nhb_id = nhbs_id[1:nhb_count]
+        set_get_functions.assign_seedling(n_seeds::Int64,
+                                        dispersal_nhb_id::Vector{Int64},
+                                        shad_h::Vector{Float64},
+                                        r_hgt::Int64,
+                                        seedlings::Vector{Vector{Int64}},
+                                        spec_ID::Int64)
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% WITHIN PATCH LONG DISTANCE DISPERSAL
     """ 
-    Within in patch long distance dispersal
+    # Within patch long distance dispersal
+    Disperse a fraction of seeds beyond the parent crown but within the same habitat fragment. The
+    disperesed seeds are added to the seedlings bank for the appropriate grid cell.
+    ## Arguments:
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `seed_production::Int64`: Species-specific constant value used within a Poisson distribution
+    to determine the number of seeds produced by an agent.
+    - `ldd_disp_frac::Float64`: Proportion of seedlings that undergo long-distance dispersal and are
+    therefore unavailable for neighbourhood dispersal.
+    - `ldd_dispersal_dist::Int64`: Species-specific mean dispersal distance
+    - `cell_grain::Int64`: The size of an individual cell in the model (cell_grain x cell_grain).
+    - `pos::Tuple{Int64,Int64}`: Coordinates of tree/agent.
+    - `pcors::Vector{Vector{Tuple{Int64, Int64}}}`: List of coordinates for all cells in model grid.
+    - `shad_h::Vector{Float64}`: Mean shade heights as calculated by `get_nhb_shade_height()` for 
+    all cells in model grid.
+    - `r_hgt::Int64`: Regeneration height in meters for selected species.
+    - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
+    model grid.
+    - `spec_ID::Int64`: Selected species ID.
     """
     function ldd_within(
-        agent,
-        model
+        model,
+        seed_production::Int64,
+        ldd_disp_frac::Float64,
+        ldd_dispersal_dist::Int64,
+        cell_grain::Int64,
+        pos::Tuple{Int64,Int64},
+        pcors::Vector{Vector{Tuple{Int64, Int64}}},
+        shad_h::Vector{Float64},
+        r_hgt::Int64,
+        seedlings::Vector{Vector{Int64}},
+        spec_ID::Int64
     )
-        ldd_seeds = trunc(Int, (rand(Poisson(model.seed_prod[agent.species_ID])) * 
-                    (model.ldd_dispersal_fracs[agent.species_ID])))
+        #% GENERATE SEEDS TO BE DISPERSED---------------------------#
+        ldd_seeds = trunc(Int, (rand(Poisson(seed_production)) 
+                                            .* (ldd_disp_frac)))
 
-        #TODO this feels messy and likely slow (SEEMS TO ADD ABOUT 0.4sec per iteration alone)
+        #% LOOP THROUGH ALL SEEDS AND ASSIGN TO A CELL--------------#
         for _ in 1:ldd_seeds
-            D = trunc(rand(Exponential((model.ldd_dispersal_dist[agent.species_ID]) / model.cell_grain)));
+            #Calculate appropriate distance
+            D = trunc(rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
             
-            #TODO change this if you can find a way to select just cells at distance not within distance
-            # MAYBE x[findall(y -> y == 10, x)[1]] could be useful
-            # Suggested solution is to alter source code of nearby_positions
-            a = collect(nearby_positions(agent.pos, model::ABM{<:GridSpaceSingle}, (D-1)));
-            b = collect(nearby_positions(agent.pos, model::ABM{<:GridSpaceSingle}, D));
+            #* Find cells at distance D only. To do this currently we find all the
+            #* cells within distance D and remove the ones also within distance D-1
+            a = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, (D-1)));
+            b = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
             D_nhbs = setdiff(b,a);
 
-            target = isempty(D_nhbs) ? Int64[] : findall(x->x==[rand(D_nhbs)], model.pcor)
-            if length(target) > 0 #seeds that disperse beyond the patch are lost
+            ## If there are avaible cells select one to be the target
+            target = Int64[]
+            if isempty(D_nhbs) .== false
+                n = rand(D_nhbs)
+                target = [findfirst(isequal([n]), pcors)]
+            end
+
+            if length(target) > 0
                 target_id = rand(target)
-                if model.nhb_shade_height[target_id] <= model.regen_heights[agent.species_ID]
-                    model.seedlings[target_id][agent.species_ID] += 1
+                #* If regeneration height is larger than targets
+                #* mean shading height assign the seed
+                if shad_h[target_id] <= r_hgt
+                    seedlings[target_id][spec_ID] += 1
                 end
             end
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% EXTERNAL TO PATCH LONG DISTANCE DISPERSAL
     """
-    Long-distance dispersal from *beyond* the plot
-    Compute total LDD seed rain and then disperse it across patches
-    NOTE THIS IS ONLY RUN ONCE PER TICK NOT ONCE PER AGENT PER TICK
+    # External long distance dispersal
+    Long-distance dispersal (or seedling rain) from beyond the modelled patch. Each grid cell has a 
+    chance of receiving a seedling from outside the simulated fragment. The probability of 
+    receiving a seedling is the larger of the species proportional abundance in the grid or a 
+    minimum chance of 1%
+    ## Arguments:
+    - `ext_dispersal_scenario::String`: Whether seeds are equally divided between species 
+    (`"equal"`) or based upon current abundances (`"abundance"`).
+    - `grid::Matrix{Tuple{Int64, Int64}}`: Matrix containing all of the coordinates of cells in the
+    current model.
+    - `n_species::Int64`: Number of total species.
+    - `abundances::Vector{Int64}`: Count of total trees of each species in the model.
+    - `external_species::Vector{Float64}`: Species-specific probability of a seed being actively
+    dispersed from beyond the modelled habitat patch.
+    - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
+    model grid.
     """
     function external_ldd(
-        model,
-        ext_dispersal_scenario,
-        grid
+        ext_dispersal_scenario::String,
+        grid::Matrix{Tuple{Int64, Int64}},
+        n_species::Int64,
+        abundances::Vector{Int64},
+        external_species::Vector{Float64},
+        seedlings::Vector{Vector{Int64}}
     )
+        #% CALCULATE ABUNDANCE--------------------------------------#
+        #* Abundance is defined based on the dispersal scenario selected
         if ext_dispersal_scenario == "equal"
-            scalar = trunc((length((positions(model)))/model.n_species))
-            ldd_abundances = fill(scalar, model.n_species)
-
+            scalar = trunc((length(grid)./n_species))
+            ldd_abundances = fill(scalar, n_species)
         elseif ext_dispersal_scenario == "abundance"
-            ldd_abundances = model.abundances
+            ldd_abundances = abundances
         else
-            error("Unknown external dispersal scenario ($ext_dispersal_scenario), must be 'equal' or 'abundance")
+            error("Unknown external dispersal scenario ($ext_dispersal_scenario), 
+            must be 'equal' or 'abundance")
         end
         
-        #* Rescale to get the number of seeds to disperse
-        crit_min = 0.01 * length((positions(model)))
+        #% RESCALE AND CALCULATE NUMBER OF SEEDS--------------------#
+        crit_min = 0.01 .* length(grid)
         ldd_abundances[ldd_abundances.<crit_min] .= crit_min
-        fun = (n,p)->rand(Binomial(n,p))
-        ldd_disperse = map(fun,ldd_abundances, model.external_species)
+        #* Anonymous function determines number of successful seed
+        #* dispersals based on number of trails and dispersal probability 
+        fun = (n::Vector{Int64},p::Vector{Float64})->rand(Binomial(n,p))
+        ldd_disperse = map(fun,ldd_abundances, external_species)
 
-        #* Disperse seeds
-        #TODO Probably a better way perhaps using the nagents function
-        for s in 1:model.n_species
-            for i in 1:length(ldd_disperse)
+        #% DISPERSE SEEDS-------------------------------------------#
+        for s in eachindex(n_species)
+            for i in eachindex(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
-                    model.seedlings[rand(1:length(grid))][s] += 1
+                    seedlings[rand(1:length(grid))][s] += 1
                 end
             end
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% HERBIVORY
     """
-    Function to determine impact of herbivory
+    # Calculate herbivore effect
+    Reduce the seedling and sapling banks by the fraction that suffer herbivory. Herbivory is 
+    explicitly considered as component of juvenile mortality, hence why only seedlings and saplings 
+    are impacted.
+    ## Arguments:
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model. Note agent must exist (i.e. not have died).
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
     """
     function herbivore_effect(
         agent,
         model
     )
-        #TODO Possibly replace all findall functions used to get patch pos from agent pos with findfirst
-        cell = findall(x->x==[agent.pos], model.pcor)[1]
+        cell = agent.patch_here_ID
 
+        ## Reduce seedlings
         model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* model.herbivory_amount)
+
+        ## If being considered reduce saplings
         if model.saplings_eaten == true
             model.saplings[cell] = round.(Int64, model.saplings[cell] .* model.herbivory_amount)
         end 
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% SEEDLING BANK EFFECTS
     """
-    Function to add species-specific local effects on the seedling bank
+    # Inhibit seedling bank
+    Implements species-specific local effects reducing the seedlings in the target patch.
+    ## Arguments:
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model. Note agent must exist (i.e. not have died).
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
     """
     function thin_regenbank(
         agent,
@@ -185,185 +364,322 @@ module demog_funcs
     )
         inhibit = model.seedling_inhibition[agent.species_ID] 
         if inhibit > 0 && inhibit < 1
-            cell = findall(x->x==[agent.pos], model.pcor)[1]
+            cell = agent.patch_here_ID
             model.seedlings[cell] = round.(Int64, model.seedlings[cell] .* (1 - inhibit))
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% LITTER FALL
     """
-    Function to get impact of tree-fern litter fall on saplings
+    # Macro-litterfall damage
+    Calculate the damage on saplings resulting from macro-litterfall (primarily under tree ferns).
+    This function simply tests whether a macro-litterfall event has occured based on a probability
+    and if true removes a single sapling from one a random species in the grid cell
+    ## Arguments:
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model. Note agent must exist (i.e. not have died).
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
     """
     function macro_litter_fall(
         agent,
         model
     )
         if rand(Uniform(0, 1)) < model.macro_litter_effect
-            cell = findall(x->x==[agent.pos], model.pcor)[1] 
+            cell = agent.patch_here_ID
             spp_die = rand(1:model.n_species)
-            model.saplings[cell][spp_die] -= 1
+            if model.saplings[cell][spp_die] ≥ 1
+                model.saplings[cell][spp_die] -= 1
+            end
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% DEATH
     """
-    Kill trees at background mortality rate
+    # Background mortality
+    Function applies a baseline mortality to all agents with a given proportion, as well as
+    accounting for age and competitive suppression and density dependent mortality. The function 
+    is broken into two broad sections. 1) Simple baseline mortality which is simply a probability
+    of a mortality event happening in a tick weighted by debnsity dependent mortality if this is 
+    selected. 2) Suppression via low growth and aging mortality.
+    ## Arguments:
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model. Note agent must exist (i.e. not have died).
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `cell::Int64`: Patch ID of cell where target tree is located
+    - `ddm::Bool`: Boolean indicating whether density dependent mortality should be accounted for 
+    or not
+    - `species_ID::Int64`: Selected species ID.
+    - `base_mortality::Vector{Float64}`: Species specific background mortaility rate. Provided as a
+    probability (0-1) of a tree dying in anyone tick.
+    - `gap_maker::Vector{Int64}`: Species specific property indicating whether a species is capable 
+    of creating a forest gap (value = 1) or not (value = 0).
+    - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
+    (value = 1) or not (value = 0). See `expand_gap()`.
+    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
+    in the current model grid.
+    - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
+    in the current model grid.
+    - `a_height::Float64`: Height in meters of the tree.
+    - `id::Int64`: Agent ID of the selected tree/agent
+    - `age::Float64`: Age (number of ticks alive) of tree
+    - `previous_growth::Vector{Float64}`: Growth penalty list for the last 5 ticks worth of growth 
+    suppression experienced by the selected tree
+    - `supp_tolerance::Vector{Float64}`: Species specific suppression tolerance
+    - `supp_mortality::Vector{Float64}`: Species specific probability of mortality due to 
+    suppression 
     """
     function death(
         agent,
         model, 
+        cell::Int64,
+        ddm::Bool,
+        species_ID::Int64,
+        base_mortality::Vector{Float64},
+        gap_maker::Vector{Int64},
+        expand::BitVector,
+        previous_species::Vector{Float64},
+        previous_height::Vector{Float64},
+        a_height::Float64,
+        id::Int64,
+        age::Float64,
+        previous_growth::Vector{Float64},
+        supp_tolerance::Vector{Float64},
+        supp_mortality::Vector{Float64}
     )
+        ## Define a mortality weighting
         mort_w = 1
-        cell = findall(x->x==[agent.pos], model.pcor)[1] 
 
-        #* Density dependent mortality
-        if model.ddm == true
+        #% CALCULATE IMPACT OF DENSITY DEPENDENT MORTAILTY----------#
+        if ddm == true
             s_nhb = 0
             for i in nearby_ids(agent, model)
-                if model[i].species_ID == agent.species_ID
+                if model[i].species_ID == species_ID
                     s_nhb += 1
                 end
             end
-            if s_nhb >=4
+            if s_nhb >= 4
                 mort_w = (1 + ((s_nhb - 4) / 4) * 1)
             end
         end
 
-        #* 1. Baseline-mortality   
-        #*   Approximates the standard gap mortality model (see Keane et al. 2001)\
-        if rand(Uniform(0, 1)) < (model.base_mortality[agent.species_ID] * mort_w)
-            if model.gap_maker[agent.species_ID] == 1
-                model.expand[cell] = true
+        #% BASELINE MORTALITY---------------------------------------#  
+        #* Approximates the standard gap mortality model 
+        #* (see Keane et al. 2001)
+        if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
+            if gap_maker[species_ID] == 1
+                expand[cell] = true
             end
-            #! NOTE only saving last previous could change to list to record all
-            #! but this may impact performance
-            model.previous_species[cell] = agent.species_ID
-            model.previous_height[cell] = agent.height
 
-            kill_agent!(agent.id, model)
+            ## Record dying tree species and height as a cell list
+            previous_species[cell] = species_ID
+            previous_height[cell] = a_height
 
-        #* 2. Suppression via low growth (p = growth-death if growth < crit-growth [a proportion]).
-        #* trees older than 10 years have a chance of competition based death
+            kill_agent!(id, model)
+            return
+
+        #% MORTAILTY DUE TO AGE AND SUPPRESSION---------------------#
+        #* trees older than 10 years have a chance of competition 
+        #* based death
         elseif (
-            agent.age > 10.0 && 
-            mean(model.previous_growth[cell]) < model.supp_tolerance[agent.species_ID] && 
-            rand(Uniform(0, 1)) < model.supp_mortality[agent.species_ID]
+            age > 10.0 && 
+            mean(previous_growth) < supp_tolerance[species_ID] &&
+            rand(Uniform(0.0, 1.0)) < supp_mortality[species_ID]
             )
-            if model.gap_maker[agent.species_ID] == 1
-                model.expand[cell] = true
+            if gap_maker[species_ID] == 1
+                expand[cell] = true
             end
-            #! NOTE only saving last previous could change to list to record all
-            #! but this may impact performance
-            model.previous_species[cell] = agent.species_ID
-            model.previous_height[cell] = agent.height
+            
+            ## Record dying tree species and height as a cell list
+            previous_species[cell] = species_ID
+            previous_height[cell] = a_height
 
-            kill_agent!(agent.id, model)
+            kill_agent!(id, model)
+            return
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% EXPAND GAPS
     """
-    Grow the gap if the dying species is a 'gap maker': a cone of neighbouring cells is affected
+    # Expand gap around dying tree
+    If the dying individual belongs to a gap-maker species then it creates a canopy gap potentially 
+    extending beyond its own grid cell on its death. The tree is assumed to fall in a direction and
+    potentially kill trees in that direction.
+    ## Arguments:
+    - `cell_ID::Int64`: Value matching the patch_id or position in model grid for target cell.
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `grid::Matrix{Tuple{Int64, Int64}}`: Matrix containing all of the coordinates of cells in the
+    current model.
     """
-    #! NOTE THIS FUNCTION IS DIFFERENT TO NETLOGO AS IT USES PREVIOUS HEIGHT AS AGENT IS DEAD
-    #! AT TIME OF CALLING (NETLOGO ALWAYS HAS A HEIGHT OF 0) 
-    #! AND A CONE ANGLE OF ZERO SO JUST SELECTS CURRENT PATCH NO GROWTH
     function expand_gap(
-        cell_ID,
+        cell_ID::Int64,
         model,
-        grid
+        grid::Matrix{Tuple{Int64, Int64}}
     )
+        #* Calculate the number of cells over which the dying tree may fall
         h = trunc(Int64, (model.previous_height[cell_ID] / model.cell_grain) + 1)
-        #model.pcor[2][1][1]
 
+        #% DETERMINE ALL POSSIBLY AFFECTED NEIGHBOURING TREES-------#
         nearby_trees = nearby_ids(grid[cell_ID], model::ABM{<:GridSpaceSingle}, h)
         ax = rand(1:2)
         fall_dir = model.pcor[cell_ID][1][ax]
+        
+        #% LOOP OVER ALL POSSIBLY AFFECTED TREES--------------------#
         for i in nearby_trees 
+            #* If tree is in direction of fall record its height
+            #* and species ID as a cell property and kill tree
             if model[i].pos[ax] == fall_dir
-                cell = findall(x->x==[model[i].pos], model.pcor)[1] 
+                cell = model[i].patch_here_ID
                 model.previous_species[cell] = model[i].species_ID
                 model.previous_height[cell] = model[i].height
 
-            kill_agent!(model[i].id, model)
+                kill_agent!(model[i].id, model)
             end
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% CAPTURE GAPS
     """
-    Have a new tree grow from sapling in a gap
+    # Grow new tree in gap
+    Potentially grow a new adult tree from the saplings bank for chosen empty cell. Each 
+    sapling has a set annual probability of 25% of capturing a gap (i.e. transitioning to adult) if 
+    there is no adult tree in the cell. Species ID is select via lottery competition weighted on 
+    the basis of local light environment if there are multiple species. 
+    ## Arguments:
+    - `cell_ID::Int64`: Value matching the patch_id or position in model grid for target cell.
+    - `model`: The AgentBasedModel object defining the current model. This object is usually 
+    created using `Agents.ABM()`.
+    - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
+    model grid.
+    - `saplings::Vector{Vector{Int64}}`: Number of saplings for each species for every cell in the
+    model grid.
+    - `nhb_light::Vector{Float64}`: Light environment for all cells in model grid. For more details
+    regarding light environments see Dislich et *al* (2009)
+    - `shade_tolerance::Vector{Float64}`: Species specific shade tolerances
+    - `growth_forms::Vector{Int64}`: Growth type of agent, 1 = trees; 2 = tree ferns.
+    - `b2_jabowas::Vector{Float64}`: List of species-specific allometric constant defined by Botkin 
+    et *al* (1972) defined as `2 * (max_height - 1.37) / max_dbh` where 1.37 is the smallest adult 
+    tree height.
+    - `b3_jabowas::Vector{Float64}`: List of species-specific allometric constant defined by Botkin 
+    et *al* (1972) defined as `(max_height - 1.37) / max_dbh ^ 2` where 1.37 is the smallest adult 
+    tree height.
+    - `last_change_tick::Vector{Int64}`: Value of previous tick in which the species ID in a cell
+    changed for all cells in the model grid
+    - `tick::Int64`: Current model timestep (i.e. tick).
+    - `n_changes::Vector{Int64}`: Total number of species ID changes that have occured in a cell for
+    all cells in the model grid
     """
     function capture_gap(
-        cell_ID,
-        model
+        cell_ID::Vector{Int64},
+        model,
+        seedlings::Vector{Vector{Int64}},
+        saplings::Vector{Vector{Int64}},
+        nhb_light::Vector{Float64},
+        shade_tolerance::Vector{Float64},
+        growth_forms::Vector{Int64},
+        b2_jabowas::Vector{Float64},
+        b3_jabowas::Vector{Float64},
+        last_change_tick::Vector{Int64},
+        tick::Int64,
+        n_changes::Vector{Int64}
     )
-        saplings = model.saplings[cell_ID]    
+        seedlings = seedlings[cell_ID]
+        saplings = saplings[cell_ID] 
 
+        #% ASSESS WHETHER TO CAPTURE GAP----------------------------#
         #? 0.25 is probability of one sapling becoming an adult
-        if sum(saplings)[1] >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings)[1]))
-            weights = floor.(Int, (abs.(model.nhb_light[cell_ID] .- 
-                                        model.shade_tolerance)) * 100)
+        if sum(saplings[1]) >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings[1])))
+            #* Create down weightings due to light environment and shade tolerance
+            weights = floor.(Int, (abs.(nhb_light[cell_ID] .- 
+                                        shade_tolerance)) * 100)
 
-            regenbank_wgt = saplings .* weights
+            regenbank_wgt = saplings[1] .* weights
 
+            #% DEFINE NEW TREE/AGENT--------------------------------#
             new_species_id = distribution_functions.lottery(regenbank_wgt, true)
-            if model.growth_forms[new_species_id] == 1
-                #? dbh (in m) of 0.01 m (1 cm) + noise (0, 0.01)
-                dbh = 0.01 + rand(Uniform(0, 0.01))
-                #TODO CONFIRM IN NETLOGO IT USES ONLY b2-jabowa I THINK THIS IS A MISTAKE 
-                #TODO HERE I USE b3 AS IS USED IN INITIALISATION
-                b2 = model.b2_jabowas[new_species_id]
-                b3 = model.b3_jabowas[new_species_id]
-                height = 1.37 + (b2 * dbh) - (b3 * dbh * dbh)
+            new_species_id = new_species_id !== nothing ? new_species_id : rand(1:length(seedlings))
+            ## For trees
+            if growth_forms[new_species_id] == 1
+                #* dbh (in m) of 0.01 m (1 cm) + noise (0, 0.01)
+                dbh = 0.01 .+ rand(Uniform(0, 0.01))
+                b2 = b2_jabowas[new_species_id]
+                b3 = b3_jabowas[new_species_id]
+                height = 1.37 .+ (b2 .* dbh) .- (b3 .* dbh .* dbh)
                 age = 1.0
-            elseif model.growth_forms[new_species_id] == 2
-                #TODO CONFIRM DBH OF GROWTH FORM 2 IN NETLOGO THEY ARE NOT DEFINED
-                dbh = 0.01 + rand(Uniform(0, 0.01)) #!LIKELY WRONG
-                height = 1.5 + rand(Uniform(0, 0.1))
+            #For tree-ferns
+            elseif growth_forms[new_species_id] == 2
+                dbh = 0.01 .+ rand(Uniform(0, 0.01))
+                height = 1.5 .+ rand(Uniform(0, 0.1))
                 age = 1.0
             else
                 error("The growth form for $new_species_id is undefined, please check species demography data")
             end
 
-            #TODO could easily change last change tick into list of all ticks where changes occur
-            model.last_change_tick[cell_ID] .= model.tick
-            model.n_changes[cell_ID] .+= 1
+            last_change_tick[cell_ID] .= tick
+            n_changes[cell_ID] .+= 1
 
-            #* Add new adult tree as agent
-            #! ABSOLUTELY NO CLUE WHY I NEED TO CREATE A NEW TUPLE AND DIVE 3 LAYERS IN TO EACH VARIABLE
-            posit = (model.pcor[cell_ID][1][1][1], model.pcor[cell_ID][1][1][2])
+            #% ASSIGN NEW TREE/AGENT TO GAP-------------------------#
+            new_agent = [new_species_id,
+                        cell_ID[1],
+                        growth_forms[new_species_id],
+                        height,
+                        dbh,
+                        age]
 
-            add_agent!(posit, model, 
-                new_species_id, 
-                model.growth_forms[new_species_id], 
-                height, 
-                dbh, 
-                age, 
-                Float64[]
-                )
+            push!(model.new_agents_list, new_agent)
 
-            #* Empty the regeneration bank
-            model.seedlings[cell_ID] = model.seedlings[cell_ID] - model.seedlings[cell_ID]
-            model.saplings[cell_ID] = model.saplings[cell_ID] - model.saplings[cell_ID]
+            #% EMPTY REGENERATION BANK------------------------------#
+            seedlings = seedlings .- seedlings
+            saplings = saplings .- saplings
         end
     end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% REGENERATE SEEDLING BANK
     """
-    Function to adjust seedling and sapling values in each patch
+    # Sapling and seedling lifecycling
+    Function undertakes mortality for the sapling and seedling banks in a cell and the growth of
+    new saplings and seedlings. 
+    ## Arguments:
+    - `cell_ID::Int64`: Value matching the patch_id or position in model grid for target cell.
+    - `seedlings::Vector{Vector{Int64}}`: Number of seedlings for each species for every cell in the
+    model grid.
+    - `saplings::Vector{Vector{Int64}}`: Number of saplings for each species for every cell in the
+    model grid.
+    - `seedling_mortality::Vector{Float64}`: Species specific baseline seedling mortality
+    probabilities.
+    - `sapling_mortality::Vector{Float64}`: Species specific baseline sapling mortality
+    probabilities.
+    - `seedling_transition::Vector{Float64}`: Species specific probability of a seedling 
+    transitioning into a sapling in a tick.
     """
     function regenerate_patch_bank(
-        cell_ID,
-        model
+        cell_ID::Int64,
+        seedlings::Vector{Vector{Int64}},
+        saplings::Vector{Vector{Int64}},
+        seedling_mortality::Vector{Float64},
+        sapling_mortality::Vector{Float64},
+        seedling_transition::Vector{Float64}
     )
-        dead_saplings = rand.(Binomial.(abs.(model.saplings[cell_ID]), model.sapling_mortality))
-        dead_seedlings = rand.(Binomial.(abs.(model.seedlings[cell_ID]), model.seedling_mortality))
+        #% SEEDLING AND SAPLING MORTAILTY---------------------------#
+        dead_saplings = rand.(Binomial.(abs.(saplings[cell_ID]), sapling_mortality))
+        dead_seedlings = rand.(Binomial.(abs.(seedlings[cell_ID]), seedling_mortality))
 
-        model.saplings[cell_ID] = model.saplings[cell_ID] - dead_saplings
-        model.saplings[cell_ID] = replace(x-> x < 0 ? 0 : x, model.saplings[cell_ID])
-        model.seedlings[cell_ID] = model.seedlings[cell_ID] - dead_seedlings
-        model.seedlings[cell_ID] = replace(x-> x < 0 ? 0 : x, model.seedlings[cell_ID])
+        saplings[cell_ID] = saplings[cell_ID] - dead_saplings
+        saplings[cell_ID] = replace(x-> x < 0 ? 0 : x, saplings[cell_ID])
+        seedlings[cell_ID] = seedlings[cell_ID] - dead_seedlings
+        seedlings[cell_ID] = replace(x-> x < 0 ? 0 : x, seedlings[cell_ID])
 
-        #* New saplings
-        new_saplings = rand.(Binomial.(abs.(model.seedlings[cell_ID]), model.seedling_transition))
+        #% ADD NEW SEEDLINGS AND SAPLINGS---------------------------#
+        new_saplings = rand.(Binomial.(abs.(seedlings[cell_ID]), seedling_transition))
 
-        model.saplings[cell_ID] = model.saplings[cell_ID] + new_saplings
-        model.seedlings[cell_ID] = model.seedlings[cell_ID] + new_saplings
+        saplings[cell_ID] = saplings[cell_ID] + new_saplings
+        seedlings[cell_ID] = seedlings[cell_ID] + new_saplings
     end
 end
