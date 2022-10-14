@@ -235,23 +235,6 @@ module go
         end 
 
         empty_patches = Random.shuffle!(empty_patches)
-        # for p in eachindex(collect(copy(empty_patches)))
-        #     cell_ID = [p]
-
-        #     # findfirst(isequal([n]), pcors)
-        #     demog_funcs.capture_gap(cell_ID, 
-        #                             model, 
-        #                             seedlings,
-        #                             saplings,
-        #                             model.nhb_light,
-        #                             model.shade_tolerance,
-        #                             model.growth_forms,
-        #                             model.b2_jabowas,
-        #                             model.b3_jabowas,
-        #                             model.last_change_tick,
-        #                             tick,
-        #                             model.n_changes)
-        # end
         for p in copy(empty_patches)
             cell_ID = findfirst(isequal([p]), model.pcor)
 
