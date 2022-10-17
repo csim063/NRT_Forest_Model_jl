@@ -1,7 +1,5 @@
 # Nga Rakau Taketake Forest Dynamics Model
 
-![Cover_Vid](\Outputs\Videos\Cover_Vid.gif)
-
 This project implements a spatially explicit individual-based model representing the dynamics of canopy and understory in a New Zealand based forest fragment. The model has been parameterized on data collected primarily in northern New Zealand. See [Morales and Perry (2017)](https://www.sciencedirect.com/science/article/abs/pii/S0304380016306068) and [Brock et *al.* (2020)](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/1365-2745.13305) for more details. This version of the model has been implemented in [Julia](https://julialang.org/) making extensive use of the [Agents.jl](https://juliadynamics.github.io/Agents.jl/stable/) package.
 
 *This model has been developed and tested on Windows*.
