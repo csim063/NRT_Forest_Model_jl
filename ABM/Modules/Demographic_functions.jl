@@ -1,4 +1,7 @@
-## TODO Documentation
+"""
+Module contains the core functions which enable agents to grow, reproduce, expand their ranges, and
+die.
+"""
 
 module demog_funcs
     using Agents

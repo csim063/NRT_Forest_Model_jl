@@ -1,5 +1,5 @@
 """
-Script contains two modules both of which contain functions which are largely miscelleneous and do 
+Script contains two modules both of which contain functions which are largely miscellaneous and do 
 not easily fit into other modules, however are helpful for model scripting. 
 
 The first module provides functions which define distributions not easily created in Julia as well
