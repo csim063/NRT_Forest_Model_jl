@@ -30,7 +30,7 @@ record_every_n_ticks = 5
 export_data = false
 export_file_name = "test"
 report_time = true
-visualisation_type = "static"
+visualisation_type = "video"
 video_export_name = "NRT_Video"
 
 #//-----------------------------------------------------------------------------------------------#
@@ -170,7 +170,8 @@ if visualisation_type == "video"
         abmvideo(
                 "Outputs/Videos/$video_export_name.mp4",
                 model, go.agent_step!, go.model_step!;
-                title ="NRT", frames = 500,
+                title ="", frames = 100, framerate = 5,
+                showstep = false,
                 plotkwargs...
         )
 end
