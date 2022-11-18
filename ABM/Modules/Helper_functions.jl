@@ -146,6 +146,7 @@ module set_get_functions
             #% ITERATE OVER EACH CHOSEN DISTANCE FROM TARGET CELL---#
             for n in getindex(shell_width)
                 ## If distance greater than one find only the targets at exactly that distance
+                ## TODO try ∉ approach to remove setdiff
                 if n ≠ 1
                     for idx in setdiff(nearby_ids(focal_pos, model, n), 
                                     nearby_ids(focal_pos, model, n-1))

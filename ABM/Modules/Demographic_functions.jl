@@ -236,7 +236,7 @@ module demog_funcs
                                             .* (ldd_disp_frac)))
 
         #% LOOP THROUGH ALL SEEDS AND ASSIGN TO A CELL--------------#
-        for _ in 1:ldd_seeds
+        Threads.@threads for _ in 1:ldd_seeds
             #Calculate appropriate distance
             D = trunc(rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
             
@@ -313,7 +313,7 @@ module demog_funcs
         ldd_disperse = map(fun,ldd_abundances, external_species)
 
         #% DISPERSE SEEDS-------------------------------------------#
-        for s in eachindex(n_species)
+        Threads.@threads for s in eachindex(n_species)
             for i in eachindex(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
                     seedlings[rand(1:length(grid))][s] += 1

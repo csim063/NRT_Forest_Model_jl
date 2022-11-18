@@ -24,7 +24,7 @@ include("Modules/Step.jl")
 
 #//-----------------------------------------------------------------------------------------------#
 #% DEFINE RUN BEHAVIOUR
-n_steps = 100
+n_steps = 10
 record_data = false
 record_every_n_ticks = 5
 export_data = false

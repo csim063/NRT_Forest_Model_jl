@@ -40,17 +40,17 @@ module go
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
         #* These variables are defined in the agent stepping
         #* function itself as they are unique to each agent.
-        spec_num = agent.species_ID
-        cell = agent.patch_here_ID
-        age = agent.age
-        shade_height = nhb_shade_height[spec_num]
-        edge_weight = edge_weights[spec_num]
-        edge_response = edge_responses[spec_num]
-        g_jabowa = g_jabowas[spec_num]
-        b2_jabowa = b2_jabowas[spec_num]
-        b3_jabowa = b3_jabowas[spec_num]
-        max_dbh = max_dbhs[spec_num]
-        max_height = max_heights[spec_num]
+        spec_num::Int64 = agent.species_ID
+        cell::Int64 = agent.patch_here_ID
+        age::Float64 = agent.age
+        shade_height::Float64 = nhb_shade_height[spec_num]
+        edge_weight::Float64 = edge_weights[spec_num]
+        edge_response::Float64 = edge_responses[spec_num]
+        g_jabowa::Float64 = g_jabowas[spec_num]
+        b2_jabowa::Float64 = b2_jabowas[spec_num]
+        b3_jabowa::Float64 = b3_jabowas[spec_num]
+        max_dbh::Float64 = max_dbhs[spec_num]
+        max_height::Int64 = max_heights[spec_num]
 
         #% GROW-----------------------------------------------------#
         #*Have each tree grow, i.e. increase their age, height and 
@@ -103,16 +103,16 @@ module go
 
             ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
             demog_funcs.ldd_within(model,
-                                   sp,
-                                   ldd_disp_frac,
-                                   ldd_disp_dist,
-                                   cell_grain,
-                                   a_position,
-                                   p_cors,
-                                   shad_hs,
-                                   r_hgt,
-                                   seedlings,
-                                   spec_num)
+                                   sp::Int64,
+                                   ldd_disp_frac::Float64,
+                                   ldd_disp_dist::Int64,
+                                   cell_grain::Int64,
+                                   a_position::Tuple{Int64,Int64},
+                                   p_cors::Vector{Vector{Tuple{Int64, Int64}}},
+                                   shad_hs::Vector{Float64},
+                                   r_hgt::Int64,
+                                   seedlings::Vector{Vector{Int64}},
+                                   spec_num::Int64)
         end
 
         #% MORTAILTY------------------------------------------------#
@@ -236,7 +236,7 @@ module go
             model.expand[ep] = false
         end
 
-        for i in 1:length(grid)
+        Threads.@threads for i in eachindex(grid)
             #% NEIGHBOURHOOD FUNCTIONS------------------------------#
             ##TODO DOES THIS NEED TO BE DONE FOR EVERY PATCH?
             #* Use the neighbours sets for all cells to determine
@@ -301,13 +301,13 @@ module go
 
         #% RESTORATION----------------------------------------------#
         if restoration_planting == true && mod(tick, planting_frequency) == 0
-            for i in 1:length(grid)
+            for i in eachindex(grid)
                 saplings[i] .+= saplings_to_plant
             end
         end
 
         #% SEEDLING AND SAPLING MORTAILTY AND GROWTH----------------#
-        for i in 1:length(grid)
+        Threads.@threads for i in eachindex(grid)
             demog_funcs.regenerate_patch_bank(i,
                                             seedlings, 
                                             saplings,

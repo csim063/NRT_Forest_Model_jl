@@ -308,7 +308,7 @@ module Setup
         nhb_sets = model.nhb_set
         crit_heights = range(0, 32, step = 4)
 
-        for i in 1:num_positions
+        Threads.@threads for i in 1:num_positions
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
                                                                                grid,
