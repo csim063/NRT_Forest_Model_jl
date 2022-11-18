@@ -88,3 +88,5 @@ end
 
 @info "Running profile"
 @profview run!(model, go.agent_step!, go.model_step!, 1000; showprogress=true)
+
+@info "Profile complete"

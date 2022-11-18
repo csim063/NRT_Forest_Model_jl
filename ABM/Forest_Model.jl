@@ -30,7 +30,7 @@ record_every_n_ticks = 5
 export_data = false
 export_file_name = "test"
 report_time = true
-visualisation_type = "video"
+visualisation_type = "static"
 video_export_name = "NRT_Video"
 
 #//-----------------------------------------------------------------------------------------------#

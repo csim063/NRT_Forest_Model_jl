@@ -243,8 +243,8 @@ module demog_funcs
             #* Find cells at distance D only. To do this currently we find all the
             #* cells within distance D and remove the ones also within distance D-1
             a = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, (D-1)));
-            b = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
-            D_nhbs = setdiff(b,a);
+            D_nhbs = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
+            setdiff!(D_nhbs, a)
 
             ## If there are avaible cells select one to be the target
             target = Int64[]
@@ -580,7 +580,6 @@ module demog_funcs
     """
     function capture_gap(
         cell_ID::Vector{Int64},
-        model,
         seedlings::Vector{Vector{Int64}},
         saplings::Vector{Vector{Int64}},
         nhb_light::Vector{Float64},
@@ -590,10 +589,11 @@ module demog_funcs
         b3_jabowas::Vector{Float64},
         last_change_tick::Vector{Int64},
         tick::Int64,
-        n_changes::Vector{Int64}
+        n_changes::Vector{Int64},
+        new_agents_list
     )
         seedlings = seedlings[cell_ID]
-        saplings = saplings[cell_ID] 
+        saplings = saplings[cell_ID]
 
         #% ASSESS WHETHER TO CAPTURE GAP----------------------------#
         #? 0.25 is probability of one sapling becoming an adult
@@ -607,7 +607,7 @@ module demog_funcs
             #% DEFINE NEW TREE/AGENT--------------------------------#
             new_species_id = distribution_functions.lottery(regenbank_wgt, true)
             new_species_id = new_species_id !== nothing ? new_species_id : rand(1:length(seedlings))
-            ## For trees
+            #% For trees
             if growth_forms[new_species_id] == 1
                 #* dbh (in m) of 0.01 m (1 cm) + noise (0, 0.01)
                 dbh = 0.01 .+ rand(Uniform(0, 0.01))
@@ -615,7 +615,7 @@ module demog_funcs
                 b3 = b3_jabowas[new_species_id]
                 height = 1.37 .+ (b2 .* dbh) .- (b3 .* dbh .* dbh)
                 age = 1.0
-            #For tree-ferns
+            #%For tree-ferns
             elseif growth_forms[new_species_id] == 2
                 dbh = 0.01 .+ rand(Uniform(0, 0.01))
                 height = 1.5 .+ rand(Uniform(0, 0.1))
@@ -635,7 +635,7 @@ module demog_funcs
                         dbh,
                         age]
 
-            push!(model.new_agents_list, new_agent)
+            push!(new_agents_list, new_agent)
 
             #% EMPTY REGENERATION BANK------------------------------#
             seedlings = seedlings .- seedlings

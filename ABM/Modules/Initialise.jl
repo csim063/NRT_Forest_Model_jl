@@ -16,23 +16,23 @@ module Setup
 
     #//-------------------------------------------------------------------------------------------#
     #% DEFINE AGENTS
-    """
-    This specialised function is defined by Agents.jl itself (see 
-    https://juliadynamics.github.io/Agents.jl/stable/api/#Agents.@agent). The function creates and
-    defines the agents, referred to as Trees, for the model. They are defined as GridAgents{2} 
-    meaning they must be placed and behave on a 2D grid model. Agents have two inbuilt properties 
-    and seven custom properties. These are:
-    - `id::Int`: Unique agent ID.
-    - `pos::NTuple{2, Int}`: Coordinates of agent.
-    - `species_ID::Int`: Value indicating what tree species the agent is.
-    - `patch_here_ID::Int`: Patch ID of the cell the agent is currently on.
-    - `growth_form::Int`: Growth type of agent, 1 = trees; 2 = tree ferns.
-    - `height::Float64`: Height in meters of agent.
-    - `dbh::Float64`: Diameter at breast height in meters of agent.
-    - `age::Float64`: Age (number of ticks) agent has been alive
-    - `previous_growth::Array`: Growth penalty list for the last 5 ticks worth of growth 
-    suppression experienced by the agent
-    """
+    
+    # This specialised function is defined by Agents.jl itself (see 
+    # https://juliadynamics.github.io/Agents.jl/stable/api/#Agents.@agent). The function creates and
+    # defines the agents, referred to as Trees, for the model. They are defined as GridAgents{2} 
+    # meaning they must be placed and behave on a 2D grid model. Agents have two inbuilt properties 
+    # and seven custom properties. These are:
+    # - `id::Int`: Unique agent ID.
+    # - `pos::NTuple{2, Int}`: Coordinates of agent.
+    # - `species_ID::Int`: Value indicating what tree species the agent is.
+    # - `patch_here_ID::Int`: Patch ID of the cell the agent is currently on.
+    # - `growth_form::Int`: Growth type of agent, 1 = trees; 2 = tree ferns.
+    # - `height::Float64`: Height in meters of agent.
+    # - `dbh::Float64`: Diameter at breast height in meters of agent.
+    # - `age::Float64`: Age (number of ticks) agent has been alive
+    # - `previous_growth::Array`: Growth penalty list for the last 5 ticks worth of growth 
+    # suppression experienced by the agent
+
     @agent Tree GridAgent{2} begin 
         species_ID::Int
         patch_here_ID::Int
@@ -205,6 +205,7 @@ module Setup
             :max_dbhs => max_dbhs::Vector{Float64},
             :max_ages => max_ages::Vector{Int64},
             :shell_layers => Int64(max_shell),
+            :shell_layers_count => collect(range(0, 32, step = 4))::Vector{Int64},
             :base_mortality => base_mortality::Vector{Float64},
             :b2_jabowas => b2_jabowas::Vector{Float64},
             :b3_jabowas => b3_jabowas::Vector{Float64},
@@ -222,7 +223,6 @@ module Setup
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
             :max_density => sap_density::Int64,
-            :new_agents_list => Any[],
             #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,

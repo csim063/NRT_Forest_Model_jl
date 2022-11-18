@@ -163,29 +163,52 @@ module go
     procedures that affect patches and globals. This function is run strictly once per model tick.
     By default the model stepping function is run after the agent stepping function.
     """
-    function model_step!(model)
+    function model_step!(
+                        model,
+                        tick::Int64 = model.tick,
+                        saplings::Vector{Vector{Int64}} = model.saplings,
+                        seedlings::Vector{Vector{Int64}} = model.seedlings,
+                        sapling_density::Vector{Int64} = model.sapling_density,
+                        seedling_density::Vector{Int64} = model.seedling_density,
+                        n_species::Int64 = model.n_species,
+                        disturbance_freq::Float64 = model.disturbance_freq,
+                        disturbed::BitVector = model.disturbed,
+                        max_disturb_size::Float64 = model.max_disturb_size,
+                        nhb_set_ids::Vector{Vector{Int64}} = model.nhb_set_ids,
+                        close_nhbs_count::Vector{Int64} = model.close_nhbs_count,
+                        patch_ID::Vector{Int64} = model.patch_ID,
+                        shell_layer_count::Vector{Int64} = model.shell_layers_count,
+                        shell_layers::Int64 = model.shell_layers,
+                        external_rain::Bool = model.external_rain,
+                        ext_dispersal_scenario::String = model.ext_dispersal_scenario,
+                        abundances::Vector{Int64} = model.abundances,
+                        external_species::Vector{Float64} = model.external_species,
+                        max_heights::Vector{Int64} = model.max_heights,
+                        pcor::Vector{Vector{Tuple{Int64, Int64}}} = model.pcor,
+                        shade_tolerance::Vector{Float64} = model.shade_tolerance,
+                        growth_forms::Vector{Int64} = model.growth_forms,
+                        b2_jabowas::Vector{Float64} = model.b2_jabowas,
+                        b3_jabowas::Vector{Float64} = model.b3_jabowas,
+                        saplings_to_plant::Vector{Int64} = model.saplings_to_plant,
+                        restoration_planting::Bool = model.restoration_planting,
+                        planting_frequency::Int64 = model.planting_frequency,
+                        seedling_mortality::Vector{Float64} = model.seedling_mortality,
+                        sapling_mortality::Vector{Float64} = model.sapling_mortality,
+                        seedling_transition::Vector{Float64} = model.seedling_transition,
+                        )
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
         grid = collect(positions(model))
-        tick = model.tick
-
-        saplings = model.saplings
-        seedlings = model.seedlings
-
-        sapling_density = model.sapling_density
-        seedling_density = model.seedling_density
-
-        n_species = model.n_species
 
         #% DISTURBANCE EVENTS---------------------------------------#
         if model.disturbance_freq > 0
             disturbance_functions.lsp_disturbance(model,
                                                   grid,
-                                                  model.disturbance_freq,
-                                                  model.disturbed,
-                                                  model.max_disturb_size,
-                                                  model.nhb_set_ids,
-                                                  model.close_nhbs_count,
-                                                  model.patch_ID,
+                                                  disturbance_freq,
+                                                  disturbed,
+                                                  max_disturb_size,
+                                                  nhb_set_ids,
+                                                  close_nhbs_count,
+                                                  patch_ID,
                                                   n_species,
                                                   seedlings,
                                                   saplings
@@ -193,111 +216,97 @@ module go
         end
 
         #% BEYOND PATCH DISPERSAL-----------------------------------#
-        if model.external_rain == true
-            demog_funcs.external_ldd(model.ext_dispersal_scenario,
+        if external_rain == true
+            demog_funcs.external_ldd(ext_dispersal_scenario,
                                      grid,
                                      n_species,
-                                     model.abundances,
-                                     model.external_species,
+                                     abundances,
+                                     external_species,
                                      seedlings)
         end
 
-        for i in 1:length(grid)
-            #% EXPAND FOREST GAPS-----------------------------------#
-            #* Only current forest gap patches may check if the 
-            #* gap may expand
-            if model.expand[i] == true
-                demog_funcs.expand_gap(i, 
-                                       model,
-                                       grid)
-                model.expand[i] = false
-            end
+        #% EXPAND FOREST GAPS---------------------------------------#
+        #* Only current forest gap patches may check if the gap may 
+        #* expand
+        for ep in model.patch_ID[model.expand .== true]
+            demog_funcs.expand_gap(ep,
+                                   model,
+                                   grid)    
 
+            model.expand[ep] = false
+        end
+
+        for i in 1:length(grid)
             #% NEIGHBOURHOOD FUNCTIONS------------------------------#
+            ##TODO DOES THIS NEED TO BE DONE FOR EVERY PATCH?
             #* Use the neighbours sets for all cells to determine
             #* there mean shade height and light environment.
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
                                                                                model,
                                                                                grid,
-                                                                               range(0, 32, step = 4),
-                                                                               model.shell_layers)
+                                                                               shell_layer_count,
+                                                                               shell_layers)
 
             model.nhb_light[i] = set_get_functions.get_light_env(model.nhb_shade_height[i], 
-                                                                model.max_heights)
-
-            
+                                                                max_heights)
         end
 
         #% GROW NEW TREES IN GAPS-----------------------------------#
-        empty_patches = Tuple{Int64, Int64}[]
-        for e in empty_positions(model)
-            push!(empty_patches, e)
-        end 
+        #TODO: This is a bit of a mess, needs to be tidied up and made into a function
+        #* Define pre-loop variables
+        empty_patches = Random.shuffle!(collect(empty_positions(model))) 
+        nhb_light = model.nhb_light
+        new_agents_list = Any[]
 
-        empty_patches = Random.shuffle!(empty_patches)
-        for p in copy(empty_patches)
-            cell_ID = findfirst(isequal([p]), model.pcor)
+        #* Loop through all empty patches and grow trees in gaps
+        for _ in eachindex(empty_patches)
+            patch = random_empty(model)
+            cell_ID = findfirst(isequal([patch]), pcor)
 
             demog_funcs.capture_gap([cell_ID], 
-                                    model, 
                                     seedlings,
                                     saplings,
-                                    model.nhb_light,
-                                    model.shade_tolerance,
-                                    model.growth_forms,
-                                    model.b2_jabowas,
-                                    model.b3_jabowas,
+                                    nhb_light,
+                                    shade_tolerance,
+                                    growth_forms,
+                                    b2_jabowas,
+                                    b3_jabowas,
                                     model.last_change_tick,
                                     tick,
-                                    model.n_changes)
+                                    model.n_changes,
+                                    new_agents_list
+                                    )
+
         end
 
         #* capture_gap() only adds the properties of a new agent to assign
         #* to a list this next loop actually assigns those agents to patches.
-        count_ep = min(length(collect(empty_positions(model))),
-                        length(model.new_agents_list))
+        empty_patches = Random.shuffle!(empty_patches)
+        for e in eachindex(new_agents_list)
+            pos = empty_patches[e]
+            agent = new_agents_list[e]
 
-        idxs = Random.shuffle(collect(1:count_ep))
-
-        for e in 1:count_ep
-            idx = idxs[e]
-            pos = empty_patches[idx]
-
-            if isempty(pos, model) == true
-                add_agent!(pos,
+            add_agent!(
+                    pos,
                     model,
-                    model.new_agents_list[idx][1], 
-                    model.new_agents_list[idx][2],
-                    model.new_agents_list[idx][3], 
-                    model.new_agents_list[idx][4], 
-                    model.new_agents_list[idx][5], 
-                    model.new_agents_list[idx][6], 
+                    agent[1], 
+                    agent[2],
+                    agent[3], 
+                    agent[4], 
+                    agent[5], 
+                    agent[6], 
                     Float64[]
                     )
-            end
-        end
-
-        model.new_agents_list = Any[]
-
-        #* Assign correct patch_here_ID for each new agent
-        for p in eachindex(grid)
-            a_id = id_in_position(p, model::ABM{<:GridSpaceSingle})
-            if a_id !== 0 && model[a_id].patch_here_ID == model.patch_ID[p]
-                model[a_id].patch_here_ID = model.patch_ID[p]
-            end
         end
 
         #% RESTORATION----------------------------------------------#
-        if model.restoration_planting == true && mod(model.tick, model.planting_frequency) == 0
+        if restoration_planting == true && mod(tick, planting_frequency) == 0
             for i in 1:length(grid)
-                saplings[i] .+= model.saplings_to_plant
+                saplings[i] .+= saplings_to_plant
             end
         end
 
         #% SEEDLING AND SAPLING MORTAILTY AND GROWTH----------------#
-        seedling_mortality = model.seedling_mortality
-        sapling_mortality = model.sapling_mortality
-        seedling_transition = model.seedling_transition
         for i in 1:length(grid)
             demog_funcs.regenerate_patch_bank(i,
                                             seedlings, 
@@ -314,6 +323,6 @@ module go
         model.max_density = maximum(sapling_density)
         set_get_functions.update_abundances(model, n_species)
 
-        tick += 1
+        model.tick += 1
     end
 end

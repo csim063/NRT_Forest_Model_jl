@@ -141,22 +141,25 @@ module set_get_functions
             s_heights = Float64[]
             agent = model[id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle})]
             focal_height = agent.height
+            focal_pos = agent.pos
 
             #% ITERATE OVER EACH CHOSEN DISTANCE FROM TARGET CELL---#
-            for n in 1:shell_width
+            for n in getindex(shell_width)
                 ## If distance greater than one find only the targets at exactly that distance
                 if n ≠ 1
-                    for idx in setdiff(nearby_ids(agent.pos, model, n), 
-                                    nearby_ids(agent.pos, model, n-1))
-                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
-                            push!(s_heights, model[idx].height)
+                    for idx in setdiff(nearby_ids(focal_pos, model, n), 
+                                    nearby_ids(focal_pos, model, n-1))
+                        idx_height = model[idx].height
+                        if idx_height > crit_heights[n] && idx_height > focal_height
+                            push!(s_heights, idx_height)
                         end
                     end
                 ## If distance one just look for agents at distance one (more efficient)
                 else
-                    for idx in nearby_ids(agent.pos, model, 1)
-                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
-                            push!(s_heights, model[idx].height)
+                    for idx in nearby_ids(focal_pos, model, 1)
+                        idx_height = model[idx].height
+                        if idx_height > crit_heights[n] && idx_height > focal_height
+                            push!(s_heights, idx_height)
                         end
                     end
                 end
@@ -271,3 +274,4 @@ module set_get_functions
         end
     end
 end
+
