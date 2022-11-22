@@ -287,14 +287,14 @@ module go
             agent = new_agents_list[e]
 
             add_agent!(
-                    pos,
+                    pos::Tuple{Int64, Int64},
                     model,
-                    agent[1], 
-                    agent[2],
-                    agent[3], 
-                    agent[4], 
-                    agent[5], 
-                    agent[6], 
+                    trunc(Int, agent[1])::Int64, 
+                    trunc(Int, agent[2])::Int64, 
+                    trunc(Int, agent[3])::Int64, 
+                    agent[4]::Float64, 
+                    agent[5]::Float64, 
+                    agent[6]::Float64, 
                     Float64[]
                     )
         end

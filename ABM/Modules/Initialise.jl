@@ -186,7 +186,6 @@ module Setup
             :n_changes => zeros(Int64, prod((dims, dims))),
             :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
             :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
-            :expand => falses(prod((dims, dims))),
             #% GLOBAL VARIABLES---------------------------#
             :tick => zero(1),
             :n_species => n_species::Int64,
@@ -273,13 +272,14 @@ module Setup
                                              specID, 
                                              site_df)
             
-            add_agent!(grid[p], model, 
-                specID, 
-                p, #patch_here_ID,
-                grow_form, 
-                agent_demog[1], #height
-                agent_demog[2], #dbh
-                agent_demog[3], #age
+            add_agent!(grid[p]::Tuple{Int64, Int64}, 
+                model, 
+                specID::Int64, 
+                p::Int64, #patch_here_ID,
+                grow_form::Int64, 
+                agent_demog[1]::Float64, #height
+                agent_demog[2]::Float64, #dbh
+                agent_demog[3]::Float64, #age
                 Float64[]
                 )
 
