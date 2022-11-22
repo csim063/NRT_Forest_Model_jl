@@ -274,5 +274,43 @@ module set_get_functions
             end
         end
     end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% GET NEIGHBOURS AT SPECIFIC DISTANCE
+    #TODO CORRECT DOCUMENTAION
+    """
+    # Get neighbours at specific distance
+    Function to get the patch_IDs of all neighbours at a specific distance from the focal cell.
+    ## Arguments:
+    - `pos::Tuple{Int64, Int64}`: Position of focal cell
+    - `model`: The AgentBasedModel object defining the current model. This object is usually
+        created using `Agents.ABM()`.
+    - `D::Int64`: Distance from focal cell to get neighbours
+    ## Return
+    - Vector{Tuple{Int64, Int64}}, patch positions of all neighbours at distance `D` from focal cell
+    ## Examples
+    ```julia-repl
+    julia> positions_at((1,1), model, 1)
+    [(1, 2), (2, 1), (2, 2)]
+    ```
+    """ 
+    function positions_at(
+        pos::Tuple{Int64, Int64},
+        model::ABM{<:GridSpaceSingle},
+        D::Int64
+    )
+        #TODO: Try use nearby_positions() source code altered to only return positions at distance D
+
+        a = collect(nearby_positions(pos::Tuple{Int64, Int64}, 
+                                    model::ABM{<:GridSpaceSingle}, 
+                                    (D::Int64-1)));
+
+        D_nhbs = collect(nearby_positions(pos::Tuple{Int64, Int64}, 
+                                        model::ABM{<:GridSpaceSingle}, 
+                                        D::Int64));
+        setdiff!(D_nhbs::Vector{Tuple{Int64, Int64}}, a::Vector{Tuple{Int64, Int64}})
+
+        return D_nhbs::Vector{Tuple{Int64, Int64}}
+    end
 end
 
