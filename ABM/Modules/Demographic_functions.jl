@@ -236,15 +236,17 @@ module demog_funcs
                                             .* (ldd_disp_frac)))
 
         #% LOOP THROUGH ALL SEEDS AND ASSIGN TO A CELL--------------#
+        #Threads.@threads for _ in 1:ldd_seeds
         for _ in 1:ldd_seeds
             #Calculate appropriate distance
-            D = trunc(rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
+            D = trunc(Int, rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
             
+            #TODO Move this documentation to the top of the function
             #* Find cells at distance D only. To do this currently we find all the
             #* cells within distance D and remove the ones also within distance D-1
-            a = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, (D-1)));
-            D_nhbs = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
-            setdiff!(D_nhbs, a)
+            D_nhbs = set_get_functions.positions_at(pos::Tuple{Int64,Int64}, 
+                                                    model::ABM{<:GridSpaceSingle}, 
+                                                    D::Int64,)
 
             ## If there are avaible cells select one to be the target
             target = Int64[]
@@ -313,7 +315,7 @@ module demog_funcs
         ldd_disperse = map(fun,ldd_abundances, external_species)
 
         #% DISPERSE SEEDS-------------------------------------------#
-        for s in eachindex(n_species)
+        Threads.@threads for s in eachindex(n_species)
             for i in eachindex(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
                     seedlings[rand(1:length(grid))][s] += 1
