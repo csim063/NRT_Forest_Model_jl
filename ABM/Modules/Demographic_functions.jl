@@ -635,7 +635,7 @@ module demog_funcs
                         growth_forms[new_species_id],
                         height,
                         dbh,
-                        age]
+                        age,]
 
             push!(new_agents_list, new_agent)
 

@@ -22,8 +22,13 @@
 - Create a kill function to avoid duplicate code used every time a tree is killed
 - Currently in `regenerate_patch_bank()` new_saplings is used as the amount of individuals to add to both saplings and seedlings
 
+## Additions
+Added phytothera spread and impacts (needs documenting)
+
 ## Questions
 
 - How realistic is it to empty the regeneration bank (seedlings and saplings) when a tree grows in a gap?
+- Should we implement a species specific phytothera spread rate rather than constants.
+- Need to assess the radius of surrounding trees assumed to be able to infect trees with phytothera, current it is radius 2 as literature mentioned short range movement
 
  
