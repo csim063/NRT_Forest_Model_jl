@@ -24,7 +24,7 @@ include("Modules/Step.jl")
 
 #//-----------------------------------------------------------------------------------------------#
 #% DEFINE RUN BEHAVIOUR
-n_steps = 1000
+n_steps = 100
 record_data = false
 record_every_n_ticks = 5
 export_data = false
@@ -44,7 +44,7 @@ if record_data == true
         adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
 end
 
-model = Setup.forest_model(forest_area = 16,
+model = Setup.forest_model(forest_area = 4,
                         cell_grain = 4, 
                         n_species = 8,
                         edge_strength = 0.0,

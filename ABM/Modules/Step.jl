@@ -164,14 +164,22 @@ module go
         ## Phytothera (e.g. Kauri dieback)
         if phytothera == true
             phytothera_infected::Bool = agent.phytothera_infected
-            infectious_radius::Int64 = 2
+            infectious_radius::Int64 = 2 ## Size of neighbourhood an infected tree can infect
+            transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
 
+            #* Spread the infection to non-infected target trees
             if phytothera_target[spec_num] == 1 && phytothera_infected == false
                 disease_functions.phytothera_spread(agent,
                                                     model,
                                                     phyto_global_prob::Float64,
                                                     phyto_local_prob::Float64,
-                                                    infectious_radius::Int64,)
+                                                    infectious_radius::Int64,
+                                                    transmission_age::Int64,)
+            end
+
+            #* Apply the disease effects to infected trees
+            if phytothera_infected == true
+                disease_functions.phytothera_impact(agent,)
             end
         end 
 
@@ -321,6 +329,8 @@ module go
                     agent[6]::Float64, 
                     Float64[],
                     false, 
+                    zero(Int64),
+                    false,
                     )
         end
 

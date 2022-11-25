@@ -31,4 +31,7 @@ Added phytothera spread and impacts (needs documenting)
 - Should we implement a species specific phytothera spread rate rather than constants.
 - Need to assess the radius of surrounding trees assumed to be able to infect trees with phytothera, current it is radius 2 as literature mentioned short range movement
 
+## Possible to do items
+- Add impact of edge effect to disease spread. Should be easy enough to just add an extra chance of global infection to edge trees of target species
+
  

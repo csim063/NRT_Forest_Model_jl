@@ -32,6 +32,8 @@ module Setup
     # - `age::Float64`: Age (number of ticks) agent has been alive
     # - `previous_growth::Array`: Growth penalty list for the last 5 ticks worth of growth 
     # - `phytothera_infected::Bool`: Whether the agent is infected by soil borne pathogens (e.g. Phytophthora)
+    # - `phytothera_infection_age::Int`: Age (number of ticks) since the agent has been infected by soil borne pathogens (e.g. Phytophthora)
+    # - `phytothera_symtomatic::Bool`: Whether the agent is showing symptoms of soil borne pathogens (e.g. Phytophthora)
 
     @agent Tree GridAgent{2} begin 
         species_ID::Int64
@@ -42,6 +44,8 @@ module Setup
         age::Float64
         previous_growth::Array
         phytothera_infected::Bool
+        phytothera_infected_age::Int64
+        phytothera_symptomatic::Bool
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -284,6 +288,7 @@ module Setup
 
             grow_form = demography_df.growth_form[specID]
             phytothera_infected = false
+            phytothera_symptomatic = false
 
 
             #% ADD A SINGLE UNIQUE AGENT TO THE PATCH-------------------------#
@@ -302,6 +307,8 @@ module Setup
                 agent_demog[3]::Float64, #age
                 Float64[],
                 phytothera_infected::Bool,
+                zero(Int64), #phytothera_infected_age
+                phytothera_symptomatic::Bool,
                 )
 
             #% UPDATE PATCH LEVEL PROPERTIES----------------------------------#
