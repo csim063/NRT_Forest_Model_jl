@@ -43,13 +43,42 @@ module disease_functions
     TODO: Document this function
     TODO: Refactor to avoid need to access globals agent and model
     """
-    function phytothera_impact(agent,)
-        if agent.phytothera_infected == true
+    function phytothera_impact(agent,
+                               model,
+                               min_symptomic_age::Int64,
+                               symptom_prob::Float64,
+                               gap_maker::Int64,
+                               species_ID::Int64,
+                               cell::Int64,
+                               expand::BitVector,
+                               previous_species::Vector{Float64},
+                               previous_height::Vector{Float64},
+                               a_height::Float64,
+                               id::Int64,
+                               )
+
+        if agent.phytothera_infected == true #TODO make this a parameter
             agent.phytothera_infected_age += 1
         end
 
-        #TODO Check infected above min symtomatic age and not already symptomatic then test to become symptomatic
+        if agent.phytothera_infected_age ≥ min_symptomic_age && agent.phytothera_symptomatic == false
+            if rand() < symptom_prob
+                agent.phytothera_symptomatic::Bool = true
+            end
+        end
 
-        #TODO Check if symptomatic, if true then test to die
+        if agent.phytothera_symptomatic == true 
+            if rand() < 0.1 #TODO: make this a parameter
+                if gap_maker[species_ID] == 1
+                    expand[cell] = true
+                end
+    
+                ## Record dying tree species and height as a cell list
+                previous_species[cell] = species_ID
+                previous_height[cell] = a_height
+    
+                kill_agent!(id, model)
+            end    
+        end
     end
 end

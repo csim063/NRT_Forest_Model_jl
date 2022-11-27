@@ -40,6 +40,8 @@ module go
         phytothera_target = model.phytothera_target::Vector{Int64},
         phyto_global_prob = model.phyto_global_prob::Float64,
         phyto_local_prob = model.phyto_local_prob::Float64,
+        phyto_infectious_radius = model.phyto_infectious_radius::Int64,
+        phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -47,7 +49,10 @@ module go
         #* function itself as they are unique to each agent.
         spec_num::Int64 = agent.species_ID
         cell::Int64 = agent.patch_here_ID
+        expand::BitVector = model.expand
         age::Float64 = agent.age
+        tree_ID::Int64 = agent.id
+        agent_pos::Tuple{Int64, Int64} = agent.pos
 
         shade_height::Float64 = nhb_shade_height[spec_num]
         edge_weight::Float64 = edge_weights[spec_num]
@@ -57,6 +62,7 @@ module go
         b3_jabowa::Float64 = b3_jabowas[spec_num]
         max_dbh::Float64 = max_dbhs[spec_num]
         max_height::Int64 = max_heights[spec_num]
+        gap_maker::Int64 = model.gap_maker[spec_num]
 
         #% GROW-----------------------------------------------------#
         #*Have each tree grow, i.e. increase their age, height and 
@@ -147,12 +153,12 @@ module go
                                 model.ddm,
                                 spec_num,
                                 model.base_mortality,
-                                model.gap_maker,
-                                model.expand,
+                                gap_maker,
+                                expand,
                                 model.previous_species,
                                 model.previous_height,
                                 agent.height,
-                                agent.id,
+                                tree_ID,
                                 age,
                                 agent.previous_growth,
                                 model.supp_tolerance,
@@ -162,10 +168,10 @@ module go
 
         #% DISEASE--------------------------------------------------#
         ## Phytothera (e.g. Kauri dieback)
-        if phytothera == true
+        if phytothera == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             phytothera_infected::Bool = agent.phytothera_infected
-            infectious_radius::Int64 = 2 ## Size of neighbourhood an infected tree can infect
             transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
+            min_symptomatic_age::Int64 = 5 ## Time after infection that trees can start to show symptoms
 
             #* Spread the infection to non-infected target trees
             if phytothera_target[spec_num] == 1 && phytothera_infected == false
@@ -173,13 +179,24 @@ module go
                                                     model,
                                                     phyto_global_prob::Float64,
                                                     phyto_local_prob::Float64,
-                                                    infectious_radius::Int64,
+                                                    phyto_infectious_radius::Int64,
                                                     transmission_age::Int64,)
             end
 
             #* Apply the disease effects to infected trees
             if phytothera_infected == true
-                disease_functions.phytothera_impact(agent,)
+                disease_functions.phytothera_impact(agent,
+                                                    model,
+                                                    min_symptomatic_age::Int64,
+                                                    phyto_symptoms_dev_prob::Float64,
+                                                    gap_maker::Int64,
+                                                    spec_num::Int64,
+                                                    cell::Int64,
+                                                    expand::BitVector,
+                                                    model.previous_species::Vector{Float64},
+                                                    model.previous_height::Vector{Float64},
+                                                    agent.height::Float64,
+                                                    tree_ID::Int64,)
             end
         end 
 

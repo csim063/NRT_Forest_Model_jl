@@ -84,6 +84,10 @@ module Setup
         to global chance
     - `phyto_local_infection_prob::Float64`: Probability of a tree being infected by phytothera due
         to local chance from an infected neighbour
+    - `phyto_infectious_radius::Int64`: Radius over which phytothera can be spread from an infected
+        tree
+    - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
+        given tick
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -108,7 +112,9 @@ module Setup
         planting_frequency::Int64 = 10,
         phytothera::Bool = false,
         phyto_global_infection_prob::Float64 = 0.0001,
-        phyto_local_infection_prob::Float64 = 0.001
+        phyto_local_infection_prob::Float64 = 0.001,
+        phyto_infectious_radius::Int64 = 1,
+        phyto_symptoms_dev_prob::Float64 = 0.1,
         )
 
 
@@ -257,6 +263,8 @@ module Setup
             :phytothera => phytothera::Bool,
             :phyto_global_prob => phyto_global_infection_prob::Float64,
             :phyto_local_prob => phyto_local_infection_prob::Float64,
+            :phyto_infectious_radius => phyto_infectious_radius::Int64,
+            :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

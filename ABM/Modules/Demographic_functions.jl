@@ -444,7 +444,7 @@ module demog_funcs
         ddm::Bool,
         species_ID::Int64,
         base_mortality::Vector{Float64},
-        gap_maker::Vector{Int64},
+        gap_maker::Int64,
         expand::BitVector,
         previous_species::Vector{Float64},
         previous_height::Vector{Float64},
@@ -475,7 +475,7 @@ module demog_funcs
         #* Approximates the standard gap mortality model 
         #* (see Keane et al. 2001)
         if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
 
@@ -494,7 +494,7 @@ module demog_funcs
             mean(previous_growth) < supp_tolerance[species_ID] &&
             rand(Uniform(0.0, 1.0)) < supp_mortality[species_ID]
             )
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
             

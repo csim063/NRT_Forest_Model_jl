@@ -66,6 +66,8 @@ model = Setup.forest_model(forest_area = 4,
                         phytothera = true, # Whether to include phytothera disease in the model
                         phyto_global_infection_prob = 0.0001,
                         phyto_local_infection_prob = 0.001,
+                        phyto_infectious_radius = 1,
+                        phyto_symptoms_dev_prob = 0.1
                         );
 
 #//-----------------------------------------------------------------------------------------------#
