@@ -48,7 +48,7 @@ module demog_metrics
         b3_jabowa::Float64
     )
         #% DEFINE COUNTER VALUES USED IN WHILE LOOP-----------------#
-        age = 0
+        age = 0.0
         est_dbh = 0.01 + rand(Uniform(0, 0.01))
         l_height = height
 
@@ -71,7 +71,7 @@ module demog_metrics
             age += rand(Normal(0.8, 0.1))
         end
 
-        return age
+        return age::Float64
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -106,7 +106,7 @@ module demog_metrics
         b_tf_height::Float64 = -0.05695
     )
         #% DEFINE COUNTER VALUES USED IN WHILE LOOP-----------------#
-        age = 0
+        age = 0.0
         est_hgt = 0.0 + rand(Uniform(0, 0.01))[1]
 
         #% LOOP THROUGH UNTIL THE DESIRED HEIGHT IS REACHED---------#
@@ -117,7 +117,7 @@ module demog_metrics
             age += rand(Normal(0.8, 0.1))
         end
 
-        return age
+        return age::Float64
     end
     
 end

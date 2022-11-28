@@ -31,16 +31,21 @@ module Setup
     # - `dbh::Float64`: Diameter at breast height in meters of agent.
     # - `age::Float64`: Age (number of ticks) agent has been alive
     # - `previous_growth::Array`: Growth penalty list for the last 5 ticks worth of growth 
-    # suppression experienced by the agent
+    # - `phytothera_infected::Bool`: Whether the agent is infected by soil borne pathogens (e.g. Phytophthora)
+    # - `phytothera_infection_age::Int`: Age (number of ticks) since the agent has been infected by soil borne pathogens (e.g. Phytophthora)
+    # - `phytothera_symtomatic::Bool`: Whether the agent is showing symptoms of soil borne pathogens (e.g. Phytophthora)
 
     @agent Tree GridAgent{2} begin 
-        species_ID::Int
-        patch_here_ID::Int
-        growth_form::Int
+        species_ID::Int64
+        patch_here_ID::Int64
+        growth_form::Int64
         height::Float64
         dbh::Float64
         age::Float64
         previous_growth::Array
+        phytothera_infected::Bool
+        phytothera_infected_age::Int64
+        phytothera_symptomatic::Bool
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -74,6 +79,16 @@ module Setup
     - `ddm::Bool`: Whether to include density dependent mortality or not
     - `restoration_planting::Bool`: Whether to include restoration planting or not
     - `planting_frequency::Int64`: How often (how many ticks) does restoration planting occur
+    - `phytothera::Bool`: Whether to include phytothera disease or not
+    - `phyto_global_infection_prob::Float64`: Probability of a tree being infected by phytothera due
+        to global chance
+    - `phyto_local_infection_prob::Float64`: Probability of a tree being infected by phytothera due
+        to local chance from an infected neighbour
+    - `phyto_infectious_radius::Int64`: Radius over which phytothera can be spread from an infected
+        tree
+    - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
+        given tick
+    - `phyto_mortality_prob::Float64`: Probability of a tree dying from phytothera in any given tick
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -95,7 +110,13 @@ module Setup
         macro_litter_effect::Float64 = 0.10,
         ddm::Bool = false,
         restoration_planting::Bool = false,
-        planting_frequency::Int64 = 10
+        planting_frequency::Int64 = 10,
+        phytothera::Bool = false,
+        phyto_global_infection_prob::Float64 = 0.0001,
+        phyto_local_infection_prob::Float64 = 0.001,
+        phyto_infectious_radius::Int64 = 1,
+        phyto_symptoms_dev_prob::Float64 = 0.1,
+        phyto_mortality_prob::Float64 = 0.1,
         )
 
 
@@ -163,7 +184,10 @@ module Setup
 
         shade_tolerance = demography_df.shade_tolerance
 
-        saplings_to_plant = Int64[1,0,1,0,0,1,0,0]
+        saplings_to_plant = Int64[1,0,1,0,0,1,0,0] #TODO: Make this a parameter or something NB
+
+        #* Is the species able to get soil disease?
+        phytothera_target = demography_df.susceptible_soil_disease::Vector{Int64}
 
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
         properties = Dict(
@@ -186,7 +210,6 @@ module Setup
             :n_changes => zeros(Int64, prod((dims, dims))),
             :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
             :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
-            :expand => falses(prod((dims, dims))),
             #% GLOBAL VARIABLES---------------------------#
             :tick => zero(1),
             :n_species => n_species::Int64,
@@ -223,6 +246,7 @@ module Setup
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
             :max_density => sap_density::Int64,
+            :phytothera_target => phytothera_target::Vector{Int64},
             #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,
@@ -237,7 +261,13 @@ module Setup
             :macro_litter_effect => macro_litter_effect::Float64,
             :ddm => ddm::Bool,
             :restoration_planting => restoration_planting::Bool,
-            :planting_frequency => planting_frequency::Int64
+            :planting_frequency => planting_frequency::Int64,
+            :phytothera => phytothera::Bool,
+            :phyto_global_prob => phyto_global_infection_prob::Float64,
+            :phyto_local_prob => phyto_local_infection_prob::Float64,
+            :phyto_infectious_radius => phyto_infectious_radius::Int64,
+            :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
+            :phyto_mortality_prob => phyto_mortality_prob::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
@@ -258,14 +288,19 @@ module Setup
             model.patch_ID[p] = p
             model.pcor[p] = grid[[p]]
 
+            #*Calculate the number of seedlings and saplings for each patch
             model.seedlings[p] = copy(seed_list)
             model.saplings[p] = copy(sap_list)
 
+            #* Calculate the species ID based on the species initial abundance in site_df
             #? Could we use dictionary keys to get name value pairs and make it clearer what we are doing
             #! Column 1 is species column 2 is initial abundance
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
 
             grow_form = demography_df.growth_form[specID]
+            phytothera_infected = false
+            phytothera_symptomatic = false
+
 
             #% ADD A SINGLE UNIQUE AGENT TO THE PATCH-------------------------#
             #*Use custom function to generate agent dbh, age, and height
@@ -273,14 +308,18 @@ module Setup
                                              specID, 
                                              site_df)
             
-            add_agent!(grid[p], model, 
-                specID, 
-                p, #patch_here_ID,
-                grow_form, 
-                agent_demog[1], #height
-                agent_demog[2], #dbh
-                agent_demog[3], #age
-                Float64[]
+            add_agent!(grid[p]::Tuple{Int64, Int64}, 
+                model, 
+                specID::Int64, 
+                p::Int64, #patch_here_ID,
+                grow_form::Int64, 
+                agent_demog[1]::Float64, #height
+                agent_demog[2]::Float64, #dbh
+                agent_demog[3]::Float64, #age
+                Float64[],
+                phytothera_infected::Bool,
+                zero(Int64), #phytothera_infected_age
+                phytothera_symptomatic::Bool,
                 )
 
             #% UPDATE PATCH LEVEL PROPERTIES----------------------------------#

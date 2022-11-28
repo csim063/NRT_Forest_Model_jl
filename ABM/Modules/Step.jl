@@ -14,6 +14,7 @@ module go
     include("Disturbance_functions.jl")
     include("Demographic_functions.jl")
     include("Helper_functions.jl")
+    include("Disease_functions.jl")
     
     #//-------------------------------------------------------------------------------------------#
     #% AGENT STEPPING FUNCTION
@@ -25,16 +26,23 @@ module go
     function agent_step!(
         agent,
         model,
-        nhb_shade_height = model.nhb_shade_height,
-        comp_multiplier = model.comp_multiplier,
-        edge_effects = model.edge_effects,
-        edge_weights = model.edge_weight,
-        edge_responses = model.edge_responses,
-        g_jabowas = model.g_jabowas,
-        b2_jabowas = model.b2_jabowas,
-        b3_jabowas = model.b3_jabowas,
-        max_dbhs = model.max_dbhs,
-        max_heights = model.max_heights
+        nhb_shade_height = model.nhb_shade_height::Vector{Float64},
+        comp_multiplier = model.comp_multiplier::Float64,
+        edge_effects = model.edge_effects::Bool,
+        edge_weights = model.edge_weight::Vector{Float64},
+        edge_responses = model.edge_responses::Vector{Float64},
+        g_jabowas = model.g_jabowas::Vector{Float64},
+        b2_jabowas = model.b2_jabowas::Vector{Float64},
+        b3_jabowas = model.b3_jabowas::Vector{Float64},
+        max_dbhs = model.max_dbhs::Vector{Float64},
+        max_heights = model.max_heights::Vector{Int64},
+        phytothera = model.phytothera::Bool,
+        phytothera_target = model.phytothera_target::Vector{Int64},
+        phyto_global_prob = model.phyto_global_prob::Float64,
+        phyto_local_prob = model.phyto_local_prob::Float64,
+        phyto_infectious_radius = model.phyto_infectious_radius::Int64,
+        phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
+        phyto_mortality_prob = model.phyto_mortality_prob::Float64,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -42,7 +50,11 @@ module go
         #* function itself as they are unique to each agent.
         spec_num::Int64 = agent.species_ID
         cell::Int64 = agent.patch_here_ID
+        expand::BitVector = model.expand
         age::Float64 = agent.age
+        tree_ID::Int64 = agent.id
+        agent_pos::Tuple{Int64, Int64} = agent.pos
+
         shade_height::Float64 = nhb_shade_height[spec_num]
         edge_weight::Float64 = edge_weights[spec_num]
         edge_response::Float64 = edge_responses[spec_num]
@@ -51,6 +63,7 @@ module go
         b3_jabowa::Float64 = b3_jabowas[spec_num]
         max_dbh::Float64 = max_dbhs[spec_num]
         max_height::Int64 = max_heights[spec_num]
+        gap_maker::Int64 = model.gap_maker[spec_num]
 
         #% GROW-----------------------------------------------------#
         #*Have each tree grow, i.e. increase their age, height and 
@@ -141,18 +154,58 @@ module go
                                 model.ddm,
                                 spec_num,
                                 model.base_mortality,
-                                model.gap_maker,
-                                model.expand,
+                                gap_maker,
+                                expand,
                                 model.previous_species,
                                 model.previous_height,
                                 agent.height,
-                                agent.id,
+                                tree_ID,
                                 age,
                                 agent.previous_growth,
                                 model.supp_tolerance,
                                 model.supp_mortality
                                 )
         end
+
+        #% DISEASE--------------------------------------------------#
+        ## Phytothera (e.g. Kauri dieback)
+        if phytothera == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
+            phytothera_infected::Bool = agent.phytothera_infected
+            #TODO: Make ages user input parameters 
+            transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
+            min_symptomatic_age::Int64 = 5 ## Time after infection that trees can start to show symptoms
+
+            #* Spread the infection to non-infected target trees
+            if phytothera_target[spec_num] == 1 && phytothera_infected == false
+                disease_functions.phytothera_spread(agent,
+                                                    model,
+                                                    phyto_global_prob::Float64,
+                                                    phyto_local_prob::Float64,
+                                                    phyto_infectious_radius::Int64,
+                                                    transmission_age::Int64,
+                                                    agent_pos::Tuple{Int64, Int64},
+                                                    )
+            end
+
+            #* Apply the disease effects to infected trees
+            if phytothera_infected == true
+                disease_functions.phytothera_impact(agent,
+                                                    model,
+                                                    agent.phytothera_infected::Bool,
+                                                    min_symptomatic_age::Int64,
+                                                    phyto_symptoms_dev_prob::Float64,
+                                                    phyto_mortality_prob,
+                                                    gap_maker::Int64,
+                                                    spec_num::Int64,
+                                                    cell::Int64,
+                                                    expand::BitVector,
+                                                    model.previous_species::Vector{Float64},
+                                                    model.previous_height::Vector{Float64},
+                                                    agent.height::Float64,
+                                                    tree_ID::Int64,)
+            end
+        end 
+
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -259,22 +312,24 @@ module go
         new_agents_list = Any[]
 
         #* Loop through all empty patches and grow trees in gaps
-        for _ in eachindex(empty_patches)
+        for _ in eachindex(empty_patches::Vector{Tuple{Int64, Int64}})
             patch = random_empty(model)
-            cell_ID = findfirst(isequal([patch]), pcor)
+            cell_ID = findfirst(isequal([patch::Tuple{Int64, Int64}]), 
+                                        pcor::Vector{Vector{Tuple{Int64, Int64}}}
+                                        )
 
-            demog_funcs.capture_gap([cell_ID], 
-                                    seedlings,
-                                    saplings,
-                                    nhb_light,
-                                    shade_tolerance,
-                                    growth_forms,
-                                    b2_jabowas,
-                                    b3_jabowas,
-                                    model.last_change_tick,
-                                    tick,
-                                    model.n_changes,
-                                    new_agents_list
+            demog_funcs.capture_gap([cell_ID::Int64], 
+                                    seedlings::Vector{Vector{Int64}},
+                                    saplings::Vector{Vector{Int64}},
+                                    nhb_light::Vector{Float64},
+                                    shade_tolerance::Vector{Float64},
+                                    growth_forms::Vector{Int64},
+                                    b2_jabowas::Vector{Float64},
+                                    b3_jabowas::Vector{Float64},
+                                    model.last_change_tick::Vector{Int64},
+                                    tick::Int64,
+                                    model.n_changes::Vector{Int64},
+                                    new_agents_list::Vector{Any},
                                     )
 
         end
@@ -287,15 +342,18 @@ module go
             agent = new_agents_list[e]
 
             add_agent!(
-                    pos,
+                    pos::Tuple{Int64, Int64},
                     model,
-                    agent[1], 
-                    agent[2],
-                    agent[3], 
-                    agent[4], 
-                    agent[5], 
-                    agent[6], 
-                    Float64[]
+                    trunc(Int, agent[1])::Int64, 
+                    trunc(Int, agent[2])::Int64, 
+                    trunc(Int, agent[3])::Int64, 
+                    agent[4]::Float64, 
+                    agent[5]::Float64, 
+                    agent[6]::Float64, 
+                    Float64[],
+                    false, 
+                    zero(Int64),
+                    false,
                     )
         end
 

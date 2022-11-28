@@ -420,7 +420,7 @@ module demog_funcs
     - `species_ID::Int64`: Selected species ID.
     - `base_mortality::Vector{Float64}`: Species specific background mortaility rate. Provided as a
     probability (0-1) of a tree dying in anyone tick.
-    - `gap_maker::Vector{Int64}`: Species specific property indicating whether a species is capable 
+    - `gap_maker::Int64`: Species specific property indicating whether a species is capable 
     of creating a forest gap (value = 1) or not (value = 0).
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`.
@@ -444,7 +444,7 @@ module demog_funcs
         ddm::Bool,
         species_ID::Int64,
         base_mortality::Vector{Float64},
-        gap_maker::Vector{Int64},
+        gap_maker::Int64,
         expand::BitVector,
         previous_species::Vector{Float64},
         previous_height::Vector{Float64},
@@ -475,7 +475,7 @@ module demog_funcs
         #* Approximates the standard gap mortality model 
         #* (see Keane et al. 2001)
         if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
 
@@ -494,7 +494,7 @@ module demog_funcs
             mean(previous_growth) < supp_tolerance[species_ID] &&
             rand(Uniform(0.0, 1.0)) < supp_mortality[species_ID]
             )
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
             
@@ -635,7 +635,7 @@ module demog_funcs
                         growth_forms[new_species_id],
                         height,
                         dbh,
-                        age]
+                        age,]
 
             push!(new_agents_list, new_agent)
 
