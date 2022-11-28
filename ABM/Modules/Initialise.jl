@@ -88,6 +88,7 @@ module Setup
         tree
     - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
         given tick
+    - `phyto_mortality_prob::Float64`: Probability of a tree dying from phytothera in any given tick
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -115,6 +116,7 @@ module Setup
         phyto_local_infection_prob::Float64 = 0.001,
         phyto_infectious_radius::Int64 = 1,
         phyto_symptoms_dev_prob::Float64 = 0.1,
+        phyto_mortality_prob::Float64 = 0.1,
         )
 
 
@@ -265,6 +267,7 @@ module Setup
             :phyto_local_prob => phyto_local_infection_prob::Float64,
             :phyto_infectious_radius => phyto_infectious_radius::Int64,
             :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
+            :phyto_mortality_prob => phyto_mortality_prob::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

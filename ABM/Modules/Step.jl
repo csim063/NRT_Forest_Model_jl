@@ -42,6 +42,7 @@ module go
         phyto_local_prob = model.phyto_local_prob::Float64,
         phyto_infectious_radius = model.phyto_infectious_radius::Int64,
         phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
+        phyto_mortality_prob = model.phyto_mortality_prob::Float64,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -170,6 +171,7 @@ module go
         ## Phytothera (e.g. Kauri dieback)
         if phytothera == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             phytothera_infected::Bool = agent.phytothera_infected
+            #TODO: Make ages user input parameters 
             transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
             min_symptomatic_age::Int64 = 5 ## Time after infection that trees can start to show symptoms
 
@@ -180,15 +182,19 @@ module go
                                                     phyto_global_prob::Float64,
                                                     phyto_local_prob::Float64,
                                                     phyto_infectious_radius::Int64,
-                                                    transmission_age::Int64,)
+                                                    transmission_age::Int64,
+                                                    agent_pos::Tuple{Int64, Int64},
+                                                    )
             end
 
             #* Apply the disease effects to infected trees
             if phytothera_infected == true
                 disease_functions.phytothera_impact(agent,
                                                     model,
+                                                    agent.phytothera_infected::Bool,
                                                     min_symptomatic_age::Int64,
                                                     phyto_symptoms_dev_prob::Float64,
+                                                    phyto_mortality_prob,
                                                     gap_maker::Int64,
                                                     spec_num::Int64,
                                                     cell::Int64,
