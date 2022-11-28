@@ -63,7 +63,7 @@ model = Setup.forest_model(forest_area = 4,
                         ddm = false,
                         restoration_planting = false,
                         planting_frequency = 10,
-                        phytothera = true, # Whether to include phytothera disease in the model
+                        phytothera = false, # Whether to include phytothera disease in the model
                         phyto_global_infection_prob = 0.0001,
                         phyto_local_infection_prob = 0.001,
                         phyto_infectious_radius = 1,

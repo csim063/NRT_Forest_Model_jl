@@ -420,7 +420,7 @@ module demog_funcs
     - `species_ID::Int64`: Selected species ID.
     - `base_mortality::Vector{Float64}`: Species specific background mortaility rate. Provided as a
     probability (0-1) of a tree dying in anyone tick.
-    - `gap_maker::Vector{Int64}`: Species specific property indicating whether a species is capable 
+    - `gap_maker::Int64`: Species specific property indicating whether a species is capable 
     of creating a forest gap (value = 1) or not (value = 0).
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`.

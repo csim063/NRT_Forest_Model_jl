@@ -23,7 +23,7 @@
 - Currently in `regenerate_patch_bank()` new_saplings is used as the amount of individuals to add to both saplings and seedlings
 
 ## Additions
-Added phytothera spread and impacts (needs documenting)
+Added phytothera spread and impacts. The disease model is implemented as an SEI (Susceptible, Exposed, Infected) model. Trees can be defined as susceptible/target species in the demography input file. Infection spreads (i.e. trees are exposed) in two ways, a global probability of a target tree getting exposed and a local probability that a target tree will get exposed by an infected neighbour in a predefined infectious radius. The more infected neighbour trees the higher the probability (or rather the more tests are done against that probability) a the target tree gets infected. Neighbours may only infect trees if they have been infected longer than a user defined time period to mimic the time taken for trees to become infectious after exposure. Infected trees may become symptomatic after a determined minimum period of time after infection and symptomatic trees may die with a given probability.
 
 ## Questions
 
@@ -33,5 +33,6 @@ Added phytothera spread and impacts (needs documenting)
 
 ## Possible to do items
 - Add impact of edge effect to disease spread. Should be easy enough to just add an extra chance of global infection to edge trees of target species
+- Add additional disease impacts resulting from becoming symptomatic.
 
  
