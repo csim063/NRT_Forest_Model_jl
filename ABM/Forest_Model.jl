@@ -62,6 +62,7 @@ model = Setup.forest_model(forest_area = 4,
                         macro_litter_effect = 0.10,
                         ddm = false,
                         restoration_planting = false,
+                        grass = false,
                         planting_frequency = 10,
                         phytothera = false, # Whether to include phytothera disease in the model
                         phyto_global_infection_prob = 0.0001,

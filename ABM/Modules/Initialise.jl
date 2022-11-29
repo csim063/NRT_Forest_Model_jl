@@ -84,6 +84,7 @@ module Setup
     - `macro_litter_effect::Float64`: Probability of a sapling being killed by a macro-litter fall
     - `ddm::Bool`: Whether to include density dependent mortality or not
     - `restoration_planting::Bool`: Whether to include restoration planting or not
+    - `grass::Bool`: Whether to include grass flag for gap patches or not
     - `planting_frequency::Int64`: How often (how many ticks) does restoration planting occur
     - `phytothera::Bool`: Whether to include phytothera disease or not
     - `phyto_global_infection_prob::Float64`: Probability of a tree being infected by phytothera due
@@ -122,6 +123,7 @@ module Setup
         macro_litter_effect::Float64 = 0.10,
         ddm::Bool = false,
         restoration_planting::Bool = false,
+        grass::Bool = false,
         planting_frequency::Int64 = 10,
         phytothera::Bool = false,
         phyto_global_infection_prob::Float64 = 0.0001,
