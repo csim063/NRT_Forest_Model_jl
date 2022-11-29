@@ -34,5 +34,6 @@ Added phytothera spread and impacts. The disease model is implemented as an SEI 
 ## Possible to do items
 - Add impact of edge effect to disease spread. Should be easy enough to just add an extra chance of global infection to edge trees of target species
 - Add additional disease impacts resulting from becoming symptomatic.
+- Could possibly improve performance by making different agents if there is or isn't disease present as if there is no disease agents require far less parameters
 
  

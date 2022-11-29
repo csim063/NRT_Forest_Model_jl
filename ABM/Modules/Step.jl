@@ -43,6 +43,11 @@ module go
         phyto_infectious_radius = model.phyto_infectious_radius::Int64,
         phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
         phyto_mortality_prob = model.phyto_mortality_prob::Float64,
+        rust = model.rust::Bool,
+        rust_target = model.rust_target::Vector{Int64},
+        rust_infection_prob = model.rust_global_infection_prob::Float64,
+        rust_symptoms_dev_prob = model.rust_symptoms_dev_prob::Float64,
+        rust_mortality_prob = model.rust_mortality_prob::Float64,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -206,6 +211,35 @@ module go
             end
         end 
 
+        ## Rust (e.g. Myrtle rust)
+        if rust == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
+            rust_infected::Bool = agent.rust_infected
+            #TODO: Make ages user input parameters
+            min_rust_symp_age::Int64 = 2 ## Time after infection that trees can start to show symptoms
+
+            #* Spread the infection to non-infected target trees
+            if rust_target[spec_num] == 1 && rust_infected == false
+                disease_functions.rust_spread(agent,
+                                              rust_infection_prob)
+            end
+
+            #* Apply the disease effects to infected trees
+            if rust_infected == true
+                disease_functions.rust_impact(agent,
+                                              model,
+                                              min_rust_symp_age,
+                                              rust_symptoms_dev_prob,
+                                              rust_mortality_prob,
+                                              gap_maker,
+                                              spec_num,
+                                              cell,
+                                              expand,
+                                              model.previous_species,
+                                              model.previous_height,
+                                              agent.height,
+                                              tree_ID)
+            end
+        end
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -351,7 +385,10 @@ module go
                     agent[5]::Float64, 
                     agent[6]::Float64, 
                     Float64[],
-                    false, 
+                    false, ## Phytothera
+                    zero(Int64),
+                    false,
+                    false, ## Rust 
                     zero(Int64),
                     false,
                     )
