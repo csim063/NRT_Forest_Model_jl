@@ -34,6 +34,9 @@ module Setup
     # - `phytothera_infected::Bool`: Whether the agent is infected by soil borne pathogens (e.g. Phytophthora)
     # - `phytothera_infection_age::Int`: Age (number of ticks) since the agent has been infected by soil borne pathogens (e.g. Phytophthora)
     # - `phytothera_symtomatic::Bool`: Whether the agent is showing symptoms of soil borne pathogens (e.g. Phytophthora)
+    # - `rust_infected::Bool`: Whether the agent is infected by rust pathogens (e.g. Myrtle Rust)
+    # - `rust_infected_age::Int`: Age (number of ticks) since the agent has been infected by rust pathogens
+    # - `rust_symptomatic::Bool`: Whether the agent is showing symptoms of rust pathogens
 
     @agent Tree GridAgent{2} begin 
         species_ID::Int64
@@ -46,6 +49,9 @@ module Setup
         phytothera_infected::Bool
         phytothera_infected_age::Int64
         phytothera_symptomatic::Bool
+        rust_infected::Bool
+        rust_infected_age::Int64
+        rust_symptomatic::Bool
     end
 
     #//-------------------------------------------------------------------------------------------#
@@ -89,6 +95,12 @@ module Setup
     - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
         given tick
     - `phyto_mortality_prob::Float64`: Probability of a tree dying from phytothera in any given tick
+    - `rust::Bool`: Whether to include rust disease or not
+    - `rust_global_infection_prob::Float64`: Probability of a tree being infected by rust due
+        to global chance
+    - `rust_symptoms_dev_prob::Float64`: Probability of a tree developing symptoms of rust in any
+        given tick
+    - `rust_mortality_prob::Float64`: Probability of a tree dying from rust in any given tick
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -117,6 +129,10 @@ module Setup
         phyto_infectious_radius::Int64 = 1,
         phyto_symptoms_dev_prob::Float64 = 0.1,
         phyto_mortality_prob::Float64 = 0.1,
+        rust::Bool = false,
+        rust_global_infection_prob::Float64 = 0.0001,
+        rust_symptoms_dev_prob::Float64 = 0.1,
+        rust_mortality_prob::Float64 = 0.1,
         )
 
 
@@ -186,8 +202,9 @@ module Setup
 
         saplings_to_plant = Int64[1,0,1,0,0,1,0,0] #TODO: Make this a parameter or something NB
 
-        #* Is the species able to get soil disease?
+        #* Is the species able to get diseases?
         phytothera_target = demography_df.susceptible_soil_disease::Vector{Int64}
+        rust_target = demography_df.susceptible_rust::Vector{Int64}
 
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
         properties = Dict(
@@ -247,6 +264,7 @@ module Setup
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
             :max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
+            :rust_target => rust_target::Vector{Int64},
             #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,
@@ -268,6 +286,10 @@ module Setup
             :phyto_infectious_radius => phyto_infectious_radius::Int64,
             :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
             :phyto_mortality_prob => phyto_mortality_prob::Float64,
+            :rust => rust::Bool,
+            :rust_global_infection_prob => rust_global_infection_prob::Float64,
+            :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
+            :rust_mortality_prob => rust_mortality_prob::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
@@ -298,9 +320,13 @@ module Setup
             specID = wsample(site_df[ : , 1], site_df[ : , 2])
 
             grow_form = demography_df.growth_form[specID]
+
+            #* Set the initial disease status for each tree assumed to be healthy initially
             phytothera_infected = false
             phytothera_symptomatic = false
-
+            rust_infected = false
+            rust_symptomatic = false
+            infected_age = zero(Int64)
 
             #% ADD A SINGLE UNIQUE AGENT TO THE PATCH-------------------------#
             #*Use custom function to generate agent dbh, age, and height
@@ -318,8 +344,11 @@ module Setup
                 agent_demog[3]::Float64, #age
                 Float64[],
                 phytothera_infected::Bool,
-                zero(Int64), #phytothera_infected_age
+                infected_age::Int64,
                 phytothera_symptomatic::Bool,
+                rust_infected::Bool,
+                infected_age::Int64,
+                rust_symptomatic::Bool,
                 )
 
             #% UPDATE PATCH LEVEL PROPERTIES----------------------------------#

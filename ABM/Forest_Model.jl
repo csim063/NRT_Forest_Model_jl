@@ -69,6 +69,10 @@ model = Setup.forest_model(forest_area = 4,
                         phyto_infectious_radius = 1,
                         phyto_symptoms_dev_prob = 0.1,
                         phyto_mortality_prob = 0.1,
+                        rust = false, # Whether to include rust disease in the model
+                        rust_global_infection_prob = 0.0001,
+                        rust_symptoms_dev_prob = 0.1,
+                        rust_mortality_prob = 0.1,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

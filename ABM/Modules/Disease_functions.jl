@@ -137,4 +137,103 @@ module disease_functions
             end    
         end
     end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% RUST FUNGUS SPREAD
+    """
+    Function implements the spread of an air-borne pathogen such as a rust e.g. Myrtle rust. The
+    spread function follows a similar, simplified, design as that implemented for Phytothera. The 
+    function contains only a exposure method where the probability of exposure is defined by the 
+    rust_global_infection_prob`user input. 
+
+    ## Arguments
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the 
+    current model being exposed to the disease.
+    - `rust_global_infection_prob`: Probability of a susceptible target tree being infected by 
+    the disease, if exposed to the disease by the global exposure method.
+    """
+    function rust_spread(agent,
+                         rust_infection_prob::Float64)
+        #* Check whether agent gets infected by global chance
+        #TODO add an increased chance if the agent is an edge patch
+        if rand() < rust_infection_prob
+            agent.rust_infected::Bool = true
+        end
+    end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% RUST FUNGUS IMPACT
+    """
+    This function checks to see whether a tree infected with a rust like disease has become
+    symptomatic and if so tests whether the tree dies or not. The probility of a tree becoming
+    symptomatic is defined by the `rust_symptoms_dev_prob` user input. The probability of a tree
+    dying once symptomatic is defined by the `rust_mortality_prob` user input.
+
+    ## Arguments
+    - `agent`: Agent object of type `GridAgent` with properties matching those defined by the
+    current model which has been infected by the disease.
+    - `model`: The AgentBasedModel object defining the current model. This object is usually
+    created using `Agents.ABM()`.
+    - `rust_infected::Bool`: Boolean value indicating whether the tree has been infected
+    by the disease.
+    - `min_symptomic_age::Int64`: Minimum age (i.e. ticks since infection) at which a tree may
+    become symptomatic.
+    - `symptom_prob::Float64`: Probability of a tree becoming symptomatic once infected and passing
+    the minimum symptomatic age.
+    - `mortality_prob::Float64`: Probability of a tree dying each tick once symptomatic.
+    - `gap_maker::Int64`: Species specific property indicating whether a species is capable 
+    of creating a forest gap (value = 1) or not (value = 0).
+    - `species_ID::Int64`: Selected species ID
+    - `cell::Int64`: Patch ID of cell where target tree is located
+    - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
+    (value = 1) or not (value = 0). See `expand_gap()`
+    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
+    in the current model grid.
+    - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
+    in the current model grid.
+    - `a_height::Float64`: Height in meters of the tree.
+    - `id::Int64`: Agent ID of the selected tree/agent
+    """
+    function rust_impact(agent,
+                         rust_infected::Bool,
+                         min_symptomic_age::Int64,
+                         symptom_prob::Float64,
+                         mortality_prob::Float64,
+                         gap_maker::Int64,
+                         species_ID::Int64,
+                         cell::Int64,
+                         expand::BitVector,
+                         previous_species::Vector{Float64},
+                         previous_height::Vector{Float64},
+                         a_height::Float64,
+                         id::Int64,
+                         )
+
+        if rust_infected == true
+            agent.rust_infected_age += 1
+        end
+
+        #* Check whether tree has become symptomatic
+        if agent.rust_infected_age ≥ min_symptomic_age && 
+            agent.rust_symptomatic == false
+            if rand() < symptom_prob
+                agent.rust_symptomatic::Bool = true
+            end
+        end
+
+        #* If symptomatic chance for tree to die
+        if agent.rust_symptomatic == true 
+            if rand() < mortality_prob
+                if gap_maker[species_ID] == 1
+                    expand[cell] = true
+                end
+    
+                ## Record dying tree species and height as a cell list
+                previous_species[cell] = species_ID
+                previous_height[cell] = a_height
+    
+                kill_agent!(id, model)
+            end    
+        end
+    end
 end
