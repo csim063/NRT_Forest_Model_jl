@@ -24,7 +24,7 @@ include("Modules/Step.jl")
 
 #//-----------------------------------------------------------------------------------------------#
 #% DEFINE RUN BEHAVIOUR
-n_steps = 100
+n_steps = 1000
 record_data = false
 record_every_n_ticks = 5
 export_data = false
@@ -44,7 +44,7 @@ if record_data == true
         adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
 end
 
-model = Setup.forest_model(forest_area = 4,
+model = Setup.forest_model(forest_area = 16,
                         cell_grain = 4, 
                         n_species = 8,
                         edge_strength = 0.0,
@@ -63,6 +63,8 @@ model = Setup.forest_model(forest_area = 4,
                         ddm = false,
                         restoration_planting = false,
                         grass = false,
+                        grass_invasion_prob = 0.5,
+                        grass_colonisation_prob = 0.5,
                         planting_frequency = 10,
                         phytothera = false, # Whether to include phytothera disease in the model
                         phyto_global_infection_prob = 0.0001,

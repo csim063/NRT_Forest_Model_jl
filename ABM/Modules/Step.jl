@@ -48,6 +48,9 @@ module go
         rust_infection_prob = model.rust_global_infection_prob::Float64,
         rust_symptoms_dev_prob = model.rust_symptoms_dev_prob::Float64,
         rust_mortality_prob = model.rust_mortality_prob::Float64,
+        grass::Bool = model.grass,
+        grass_invasion_prob::Float64 = model.grass_invasion_prob,
+        grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -100,37 +103,41 @@ module go
             shad_hs = nhb_shade_height
             r_hgt = model.regen_heights[agent.species_ID]
             seedlings = model.seedlings
-            if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
-                nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
+                    nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
 
-                demog_funcs.nhb_dispersal(model,
-                                        sp,
-                                        ldd_disp_frac,
-                                        r_hgt,
-                                        agent.dbh,
-                                        cell_grain,
-                                        model.shell_layers,
-                                        a_position, 
-                                        nhbs_ids,
-                                        shad_hs,
-                                        seedlings,
-                                        spec_num
-                                        )
+                    demog_funcs.nhb_dispersal(model,
+                                            sp::Int64,
+                                            ldd_disp_frac::Float64,
+                                            r_hgt::Int64,
+                                            agent.dbh::Float64,
+                                            cell_grain::Int64,
+                                            model.shell_layers::Int64,
+                                            a_position::Tuple{Int64, Int64},
+                                            nhbs_ids::Vector{Int64},
+                                            shad_hs::Vector{Float64},
+                                            seedlings::Vector{Vector{Int64}},
+                                            spec_num::Int64
+                                            )
 
+                end
             end
 
-            ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
-            demog_funcs.ldd_within(model,
-                                   sp::Int64,
-                                   ldd_disp_frac::Float64,
-                                   ldd_disp_dist::Int64,
-                                   cell_grain::Int64,
-                                   a_position::Tuple{Int64,Int64},
-                                   p_cors::Vector{Vector{Tuple{Int64, Int64}}},
-                                   shad_hs::Vector{Float64},
-                                   r_hgt::Int64,
-                                   seedlings::Vector{Vector{Int64}},
-                                   spec_num::Int64)
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
+                demog_funcs.ldd_within(model,
+                                    sp::Int64,
+                                    ldd_disp_frac::Float64,
+                                    ldd_disp_dist::Int64,
+                                    cell_grain::Int64,
+                                    a_position::Tuple{Int64,Int64},
+                                    p_cors::Vector{Vector{Tuple{Int64, Int64}}},
+                                    shad_hs::Vector{Float64},
+                                    r_hgt::Int64,
+                                    seedlings::Vector{Vector{Int64}},
+                                    spec_num::Int64)
+            end
         end
 
         #% MORTAILTY------------------------------------------------#
@@ -168,7 +175,9 @@ module go
                                 age,
                                 agent.previous_growth,
                                 model.supp_tolerance,
-                                model.supp_mortality
+                                model.supp_mortality,
+                                grass,
+                                grass_invasion_prob,
                                 )
         end
 
@@ -207,7 +216,9 @@ module go
                                                     model.previous_species::Vector{Float64},
                                                     model.previous_height::Vector{Float64},
                                                     agent.height::Float64,
-                                                    tree_ID::Int64,)
+                                                    tree_ID::Int64,
+                                                    grass::Bool,
+                                                    grass_invasion_prob::Float64,)
             end
         end 
 
@@ -226,7 +237,7 @@ module go
             #* Apply the disease effects to infected trees
             if rust_infected == true
                 disease_functions.rust_impact(agent,
-                                              model,
+                                              rust_infected,
                                               min_rust_symp_age,
                                               rust_symptoms_dev_prob,
                                               rust_mortality_prob,
@@ -237,7 +248,9 @@ module go
                                               model.previous_species,
                                               model.previous_height,
                                               agent.height,
-                                              tree_ID)
+                                              tree_ID,
+                                              grass,
+                                              grass_invasion_prob,)
             end
         end
     end
@@ -282,6 +295,9 @@ module go
                         seedling_mortality::Vector{Float64} = model.seedling_mortality,
                         sapling_mortality::Vector{Float64} = model.sapling_mortality,
                         seedling_transition::Vector{Float64} = model.seedling_transition,
+                        grass::Bool = model.grass,
+                        grass_invasion_prob::Float64 = model.grass_invasion_prob,
+                        grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
                         )
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
         grid = collect(positions(model))
@@ -298,18 +314,22 @@ module go
                                                   patch_ID,
                                                   n_species,
                                                   seedlings,
-                                                  saplings
+                                                  saplings,
+                                                  grass,
+                                                  grass_invasion_prob
                                                   )
         end
 
         #% BEYOND PATCH DISPERSAL-----------------------------------#
         if external_rain == true
-            demog_funcs.external_ldd(ext_dispersal_scenario,
-                                     grid,
-                                     n_species,
-                                     abundances,
-                                     external_species,
-                                     seedlings)
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                demog_funcs.external_ldd(ext_dispersal_scenario,
+                                        grid,
+                                        n_species,
+                                        abundances,
+                                        external_species,
+                                        seedlings,)
+            end
         end
 
         #% EXPAND FOREST GAPS---------------------------------------#
@@ -318,7 +338,9 @@ module go
         for ep in model.patch_ID[model.expand .== true]
             demog_funcs.expand_gap(ep,
                                    model,
-                                   grid)    
+                                   grid,
+                                   grass,
+                                   grass_invasion_prob)    
 
             model.expand[ep] = false
         end
