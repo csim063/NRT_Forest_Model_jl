@@ -85,6 +85,9 @@ module Setup
     - `ddm::Bool`: Whether to include density dependent mortality or not
     - `restoration_planting::Bool`: Whether to include restoration planting or not
     - `grass::Bool`: Whether to include grass flag for gap patches or not
+    - `grass_invasion_prob::Float64`: Chance grass will invade a gap patch after a tree dies
+    - `grass_colonisation_prob::Float64`: Chance a seed landing on a grass patch will establish into
+        a seedling
     - `planting_frequency::Int64`: How often (how many ticks) does restoration planting occur
     - `phytothera::Bool`: Whether to include phytothera disease or not
     - `phyto_global_infection_prob::Float64`: Probability of a tree being infected by phytothera due
@@ -145,7 +148,7 @@ module Setup
         rust_global_infection_prob::Float64 = 0.0001,
         rust_symptoms_dev_prob::Float64 = 0.1,
         rust_mortality_prob::Float64 = 0.1,
-        rust_min_symptomatic_age::Int64 = 5,
+        rust_min_symptomatic_age::Int64 = 2,
         )
 
 
