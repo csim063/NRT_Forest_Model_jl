@@ -36,6 +36,7 @@ module go
         b3_jabowas = model.b3_jabowas::Vector{Float64},
         max_dbhs = model.max_dbhs::Vector{Float64},
         max_heights = model.max_heights::Vector{Int64},
+        expand = model.expand::BitVector,
         phytothera = model.phytothera::Bool,
         phytothera_target = model.phytothera_target::Vector{Int64},
         phyto_global_prob = model.phyto_global_prob::Float64,
@@ -43,11 +44,14 @@ module go
         phyto_infectious_radius = model.phyto_infectious_radius::Int64,
         phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
         phyto_mortality_prob = model.phyto_mortality_prob::Float64,
+        phyto_transmission_age = model.phyto_transmission_age::Int64,
+        phyto_min_symptomatic_age = model.phyto_min_symptomatic_age::Int64,
         rust = model.rust::Bool,
         rust_target = model.rust_target::Vector{Int64},
         rust_infection_prob = model.rust_global_infection_prob::Float64,
         rust_symptoms_dev_prob = model.rust_symptoms_dev_prob::Float64,
         rust_mortality_prob = model.rust_mortality_prob::Float64,
+        rust_min_symptomatic_age = model.rust_min_symptomatic_age::Int64,
         grass::Bool = model.grass,
         grass_invasion_prob::Float64 = model.grass_invasion_prob,
         grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
@@ -58,7 +62,6 @@ module go
         #* function itself as they are unique to each agent.
         spec_num::Int64 = agent.species_ID
         cell::Int64 = agent.patch_here_ID
-        expand::BitVector = model.expand
         age::Float64 = agent.age
         tree_ID::Int64 = agent.id
         agent_pos::Tuple{Int64, Int64} = agent.pos
@@ -185,9 +188,6 @@ module go
         ## Phytothera (e.g. Kauri dieback)
         if phytothera == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             phytothera_infected::Bool = agent.phytothera_infected
-            #TODO: Make ages user input parameters 
-            transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
-            min_symptomatic_age::Int64 = 5 ## Time after infection that trees can start to show symptoms
 
             #* Spread the infection to non-infected target trees
             if phytothera_target[spec_num] == 1 && phytothera_infected == false
@@ -196,7 +196,7 @@ module go
                                                     phyto_global_prob::Float64,
                                                     phyto_local_prob::Float64,
                                                     phyto_infectious_radius::Int64,
-                                                    transmission_age::Int64,
+                                                    phyto_transmission_age::Int64,
                                                     agent_pos::Tuple{Int64, Int64},
                                                     )
             end
@@ -206,7 +206,7 @@ module go
                 disease_functions.phytothera_impact(agent,
                                                     model,
                                                     agent.phytothera_infected::Bool,
-                                                    min_symptomatic_age::Int64,
+                                                    phyto_min_symptomatic_age::Int64,
                                                     phyto_symptoms_dev_prob::Float64,
                                                     phyto_mortality_prob,
                                                     gap_maker::Int64,
@@ -225,8 +225,6 @@ module go
         ## Rust (e.g. Myrtle rust)
         if rust == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             rust_infected::Bool = agent.rust_infected
-            #TODO: Make ages user input parameters
-            min_rust_symp_age::Int64 = 2 ## Time after infection that trees can start to show symptoms
 
             #* Spread the infection to non-infected target trees
             if rust_target[spec_num] == 1 && rust_infected == false
@@ -238,7 +236,7 @@ module go
             if rust_infected == true
                 disease_functions.rust_impact(agent,
                                               rust_infected,
-                                              min_rust_symp_age,
+                                              rust_min_symptomatic_age,
                                               rust_symptoms_dev_prob,
                                               rust_mortality_prob,
                                               gap_maker,

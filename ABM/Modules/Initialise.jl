@@ -96,12 +96,18 @@ module Setup
     - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
         given tick
     - `phyto_mortality_prob::Float64`: Probability of a tree dying from phytothera in any given tick
+    - `phyto_transmission_age::Int64`: Age (number of ticks) after which phytothera can be spread
+        from an infected tree
+    - `phyto_min_symptomatic_age::Int64`: Age (number of ticks) after which phytothera can cause
+        mortality in a tree
     - `rust::Bool`: Whether to include rust disease or not
     - `rust_global_infection_prob::Float64`: Probability of a tree being infected by rust due
         to global chance
     - `rust_symptoms_dev_prob::Float64`: Probability of a tree developing symptoms of rust in any
         given tick
     - `rust_mortality_prob::Float64`: Probability of a tree dying from rust in any given tick
+    - `rust_min_symptomatic_age::Int64`: Age (number of ticks) after which rust can cause
+        mortality in a tree
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -133,10 +139,13 @@ module Setup
         phyto_infectious_radius::Int64 = 1,
         phyto_symptoms_dev_prob::Float64 = 0.1,
         phyto_mortality_prob::Float64 = 0.1,
+        phyto_transmission_age::Int64 = 5,
+        phyto_min_symptomatic_age::Int64 = 5,
         rust::Bool = false,
         rust_global_infection_prob::Float64 = 0.0001,
         rust_symptoms_dev_prob::Float64 = 0.1,
         rust_mortality_prob::Float64 = 0.1,
+        rust_min_symptomatic_age::Int64 = 5,
         )
 
 
@@ -294,10 +303,13 @@ module Setup
             :phyto_infectious_radius => phyto_infectious_radius::Int64,
             :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
             :phyto_mortality_prob => phyto_mortality_prob::Float64,
+            :phyto_transmission_age => phyto_transmission_age::Int64,
+            :phyto_min_symptomatic_age => phyto_min_symptomatic_age::Int64,
             :rust => rust::Bool,
             :rust_global_infection_prob => rust_global_infection_prob::Float64,
             :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
             :rust_mortality_prob => rust_mortality_prob::Float64,
+            :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

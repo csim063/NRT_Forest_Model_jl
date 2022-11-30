@@ -24,7 +24,7 @@ include("Modules/Step.jl")
 
 #//-----------------------------------------------------------------------------------------------#
 #% DEFINE RUN BEHAVIOUR
-n_steps = 1000
+n_steps = 100
 record_data = false
 record_every_n_ticks = 5
 export_data = false
@@ -44,7 +44,7 @@ if record_data == true
         adata = [:pos, :species_ID, :growth_form, :height, :dbh, :age];
 end
 
-model = Setup.forest_model(forest_area = 16,
+model = Setup.forest_model(forest_area = 4,
                         cell_grain = 4, 
                         n_species = 8,
                         edge_strength = 0.0,
@@ -72,10 +72,13 @@ model = Setup.forest_model(forest_area = 16,
                         phyto_infectious_radius = 1,
                         phyto_symptoms_dev_prob = 0.1,
                         phyto_mortality_prob = 0.1,
+                        phyto_transmission_age = 5,
+                        phyto_min_symptomatic_age = 5,
                         rust = false, # Whether to include rust disease in the model
                         rust_global_infection_prob = 0.0001,
                         rust_symptoms_dev_prob = 0.1,
                         rust_mortality_prob = 0.1,
+                        rust_min_symptomatic_age = 5,
                         );
 
 #//-----------------------------------------------------------------------------------------------#
