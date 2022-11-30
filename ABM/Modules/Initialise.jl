@@ -85,6 +85,9 @@ module Setup
     - `ddm::Bool`: Whether to include density dependent mortality or not
     - `restoration_planting::Bool`: Whether to include restoration planting or not
     - `grass::Bool`: Whether to include grass flag for gap patches or not
+    - `grass_invasion_prob::Float64`: Chance grass will invade a gap patch after a tree dies
+    - `grass_colonisation_prob::Float64`: Chance a seed landing on a grass patch will establish into
+        a seedling
     - `planting_frequency::Int64`: How often (how many ticks) does restoration planting occur
     - `phytothera::Bool`: Whether to include phytothera disease or not
     - `phyto_global_infection_prob::Float64`: Probability of a tree being infected by phytothera due
@@ -96,12 +99,18 @@ module Setup
     - `phyto_symptom_prob::Float64`: Probability of a tree developing symptoms of phytothera in any
         given tick
     - `phyto_mortality_prob::Float64`: Probability of a tree dying from phytothera in any given tick
+    - `phyto_transmission_age::Int64`: Age (number of ticks) after which phytothera can be spread
+        from an infected tree
+    - `phyto_min_symptomatic_age::Int64`: Age (number of ticks) after which phytothera can cause
+        mortality in a tree
     - `rust::Bool`: Whether to include rust disease or not
     - `rust_global_infection_prob::Float64`: Probability of a tree being infected by rust due
         to global chance
     - `rust_symptoms_dev_prob::Float64`: Probability of a tree developing symptoms of rust in any
         given tick
     - `rust_mortality_prob::Float64`: Probability of a tree dying from rust in any given tick
+    - `rust_min_symptomatic_age::Int64`: Age (number of ticks) after which rust can cause
+        mortality in a tree
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -124,6 +133,8 @@ module Setup
         ddm::Bool = false,
         restoration_planting::Bool = false,
         grass::Bool = false,
+        grass_invasion_prob::Float64 = 0.5,
+        grass_colonisation_prob::Float64 = 0.5,
         planting_frequency::Int64 = 10,
         phytothera::Bool = false,
         phyto_global_infection_prob::Float64 = 0.0001,
@@ -131,10 +142,13 @@ module Setup
         phyto_infectious_radius::Int64 = 1,
         phyto_symptoms_dev_prob::Float64 = 0.1,
         phyto_mortality_prob::Float64 = 0.1,
+        phyto_transmission_age::Int64 = 5,
+        phyto_min_symptomatic_age::Int64 = 5,
         rust::Bool = false,
         rust_global_infection_prob::Float64 = 0.0001,
         rust_symptoms_dev_prob::Float64 = 0.1,
         rust_mortality_prob::Float64 = 0.1,
+        rust_min_symptomatic_age::Int64 = 2,
         )
 
 
@@ -225,6 +239,7 @@ module Setup
             :nhb_light => zeros(Float64, prod((dims, dims))),
             :disturbed => falses(prod((dims, dims))),
             :expand => falses(prod((dims, dims))),
+            :grass_flag => falses(prod((dims, dims))),
             :last_change_tick => zeros(Int64, prod((dims, dims))),
             :n_changes => zeros(Int64, prod((dims, dims))),
             :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
@@ -281,6 +296,9 @@ module Setup
             :macro_litter_effect => macro_litter_effect::Float64,
             :ddm => ddm::Bool,
             :restoration_planting => restoration_planting::Bool,
+            :grass => grass::Bool,
+            :grass_invasion_prob => grass_invasion_prob::Float64,
+            :grass_colonisation_prob => grass_colonisation_prob::Float64,
             :planting_frequency => planting_frequency::Int64,
             :phytothera => phytothera::Bool,
             :phyto_global_prob => phyto_global_infection_prob::Float64,
@@ -288,10 +306,13 @@ module Setup
             :phyto_infectious_radius => phyto_infectious_radius::Int64,
             :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
             :phyto_mortality_prob => phyto_mortality_prob::Float64,
+            :phyto_transmission_age => phyto_transmission_age::Int64,
+            :phyto_min_symptomatic_age => phyto_min_symptomatic_age::Int64,
             :rust => rust::Bool,
             :rust_global_infection_prob => rust_global_infection_prob::Float64,
             :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
             :rust_mortality_prob => rust_mortality_prob::Float64,
+            :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

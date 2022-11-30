@@ -63,6 +63,8 @@ model = Setup.forest_model(forest_area = 4,
                         ddm = false,
                         restoration_planting = false,
                         grass = false,
+                        grass_invasion_prob = 0.5,
+                        grass_colonisation_prob = 0.5,
                         planting_frequency = 10,
                         phytothera = false, # Whether to include phytothera disease in the model
                         phyto_global_infection_prob = 0.0001,
@@ -70,10 +72,13 @@ model = Setup.forest_model(forest_area = 4,
                         phyto_infectious_radius = 1,
                         phyto_symptoms_dev_prob = 0.1,
                         phyto_mortality_prob = 0.1,
+                        phyto_transmission_age = 5,
+                        phyto_min_symptomatic_age = 5,
                         rust = false, # Whether to include rust disease in the model
                         rust_global_infection_prob = 0.0001,
                         rust_symptoms_dev_prob = 0.1,
                         rust_mortality_prob = 0.1,
+                        rust_min_symptomatic_age = 5,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

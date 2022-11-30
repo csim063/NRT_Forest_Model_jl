@@ -108,6 +108,8 @@ module disease_functions
                                previous_height::Vector{Float64},
                                a_height::Float64,
                                id::Int64,
+                               grass::Bool,
+                               grass_invasion_prob::Float64,
                                )
 
         if phytothera_infected == true
@@ -134,6 +136,9 @@ module disease_functions
                 previous_height[cell] = a_height
     
                 kill_agent!(id, model)
+                if grass == true && rand() < grass_invasion_prob
+                    model.grass_flag[cell] = true
+                end
             end    
         end
     end
@@ -207,6 +212,8 @@ module disease_functions
                          previous_height::Vector{Float64},
                          a_height::Float64,
                          id::Int64,
+                         grass::Bool,
+                         grass_invasion_prob::Float64,
                          )
 
         if rust_infected == true
@@ -233,6 +240,9 @@ module disease_functions
                 previous_height[cell] = a_height
     
                 kill_agent!(id, model)
+                if grass == true && rand() < grass_invasion_prob
+                    model.grass_flag[cell] = true
+                end
             end    
         end
     end

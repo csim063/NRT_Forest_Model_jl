@@ -436,6 +436,8 @@ module demog_funcs
     - `supp_tolerance::Vector{Float64}`: Species specific suppression tolerance
     - `supp_mortality::Vector{Float64}`: Species specific probability of mortality due to 
     suppression 
+    - `grass::Bool`: Boolean indicating whether grass is present in the model or not
+    - `grass_invasion_prob::Float64`: Probability of grass invading a patch
     """
     function death(
         agent,
@@ -453,7 +455,9 @@ module demog_funcs
         age::Float64,
         previous_growth::Vector{Float64},
         supp_tolerance::Vector{Float64},
-        supp_mortality::Vector{Float64}
+        supp_mortality::Vector{Float64},
+        grass::Bool,
+        grass_invasion_prob::Float64,
     )
         ## Define a mortality weighting
         mort_w = 1
@@ -484,6 +488,9 @@ module demog_funcs
             previous_height[cell] = a_height
 
             kill_agent!(id, model)
+            if grass == true && rand() < grass_invasion_prob
+                model.grass_flag[cell] = true
+            end
             return
 
         #% MORTAILTY DUE TO AGE AND SUPPRESSION---------------------#
@@ -503,6 +510,9 @@ module demog_funcs
             previous_height[cell] = a_height
 
             kill_agent!(id, model)
+            if grass == true && rand() < grass_invasion_prob
+                model.grass_flag[cell] = true
+            end
             return
         end
     end
@@ -524,7 +534,9 @@ module demog_funcs
     function expand_gap(
         cell_ID::Int64,
         model,
-        grid::Matrix{Tuple{Int64, Int64}}
+        grid::Matrix{Tuple{Int64, Int64}},
+        grass::Bool,
+        grass_invasion_prob::Float64,
     )
         #* Calculate the number of cells over which the dying tree may fall
         h = trunc(Int64, (model.previous_height[cell_ID] / model.cell_grain) + 1)
@@ -544,6 +556,9 @@ module demog_funcs
                 model.previous_height[cell] = model[i].height
 
                 kill_agent!(model[i].id, model)
+                if grass == true && rand() < grass_invasion_prob
+                    model.grass_flag[cell] = true
+                end
             end
         end
     end

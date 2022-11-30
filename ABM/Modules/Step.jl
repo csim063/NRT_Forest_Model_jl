@@ -36,6 +36,7 @@ module go
         b3_jabowas = model.b3_jabowas::Vector{Float64},
         max_dbhs = model.max_dbhs::Vector{Float64},
         max_heights = model.max_heights::Vector{Int64},
+        expand = model.expand::BitVector,
         phytothera = model.phytothera::Bool,
         phytothera_target = model.phytothera_target::Vector{Int64},
         phyto_global_prob = model.phyto_global_prob::Float64,
@@ -43,11 +44,17 @@ module go
         phyto_infectious_radius = model.phyto_infectious_radius::Int64,
         phyto_symptoms_dev_prob = model.phyto_symptoms_dev_prob::Float64,
         phyto_mortality_prob = model.phyto_mortality_prob::Float64,
+        phyto_transmission_age = model.phyto_transmission_age::Int64,
+        phyto_min_symptomatic_age = model.phyto_min_symptomatic_age::Int64,
         rust = model.rust::Bool,
         rust_target = model.rust_target::Vector{Int64},
         rust_infection_prob = model.rust_global_infection_prob::Float64,
         rust_symptoms_dev_prob = model.rust_symptoms_dev_prob::Float64,
         rust_mortality_prob = model.rust_mortality_prob::Float64,
+        rust_min_symptomatic_age = model.rust_min_symptomatic_age::Int64,
+        grass::Bool = model.grass,
+        grass_invasion_prob::Float64 = model.grass_invasion_prob,
+        grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
     )
     
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -55,7 +62,6 @@ module go
         #* function itself as they are unique to each agent.
         spec_num::Int64 = agent.species_ID
         cell::Int64 = agent.patch_here_ID
-        expand::BitVector = model.expand
         age::Float64 = agent.age
         tree_ID::Int64 = agent.id
         agent_pos::Tuple{Int64, Int64} = agent.pos
@@ -100,37 +106,41 @@ module go
             shad_hs = nhb_shade_height
             r_hgt = model.regen_heights[agent.species_ID]
             seedlings = model.seedlings
-            if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
-                nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                if sp > zero(1) #*zero(1) gives a 0 value which is more type stable than 0
+                    nhbs_ids = model.nhb_set_ids[agent.patch_here_ID]
 
-                demog_funcs.nhb_dispersal(model,
-                                        sp,
-                                        ldd_disp_frac,
-                                        r_hgt,
-                                        agent.dbh,
-                                        cell_grain,
-                                        model.shell_layers,
-                                        a_position, 
-                                        nhbs_ids,
-                                        shad_hs,
-                                        seedlings,
-                                        spec_num
-                                        )
+                    demog_funcs.nhb_dispersal(model,
+                                            sp::Int64,
+                                            ldd_disp_frac::Float64,
+                                            r_hgt::Int64,
+                                            agent.dbh::Float64,
+                                            cell_grain::Int64,
+                                            model.shell_layers::Int64,
+                                            a_position::Tuple{Int64, Int64},
+                                            nhbs_ids::Vector{Int64},
+                                            shad_hs::Vector{Float64},
+                                            seedlings::Vector{Vector{Int64}},
+                                            spec_num::Int64
+                                            )
 
+                end
             end
 
-            ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
-            demog_funcs.ldd_within(model,
-                                   sp::Int64,
-                                   ldd_disp_frac::Float64,
-                                   ldd_disp_dist::Int64,
-                                   cell_grain::Int64,
-                                   a_position::Tuple{Int64,Int64},
-                                   p_cors::Vector{Vector{Tuple{Int64, Int64}}},
-                                   shad_hs::Vector{Float64},
-                                   r_hgt::Int64,
-                                   seedlings::Vector{Vector{Int64}},
-                                   spec_num::Int64)
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                ldd_disp_dist = model.ldd_dispersal_dist[agent.species_ID]
+                demog_funcs.ldd_within(model,
+                                    sp::Int64,
+                                    ldd_disp_frac::Float64,
+                                    ldd_disp_dist::Int64,
+                                    cell_grain::Int64,
+                                    a_position::Tuple{Int64,Int64},
+                                    p_cors::Vector{Vector{Tuple{Int64, Int64}}},
+                                    shad_hs::Vector{Float64},
+                                    r_hgt::Int64,
+                                    seedlings::Vector{Vector{Int64}},
+                                    spec_num::Int64)
+            end
         end
 
         #% MORTAILTY------------------------------------------------#
@@ -168,7 +178,9 @@ module go
                                 age,
                                 agent.previous_growth,
                                 model.supp_tolerance,
-                                model.supp_mortality
+                                model.supp_mortality,
+                                grass,
+                                grass_invasion_prob,
                                 )
         end
 
@@ -176,9 +188,6 @@ module go
         ## Phytothera (e.g. Kauri dieback)
         if phytothera == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             phytothera_infected::Bool = agent.phytothera_infected
-            #TODO: Make ages user input parameters 
-            transmission_age::Int64 = 5 ## Time after infection that trees can infect other trees
-            min_symptomatic_age::Int64 = 5 ## Time after infection that trees can start to show symptoms
 
             #* Spread the infection to non-infected target trees
             if phytothera_target[spec_num] == 1 && phytothera_infected == false
@@ -187,7 +196,7 @@ module go
                                                     phyto_global_prob::Float64,
                                                     phyto_local_prob::Float64,
                                                     phyto_infectious_radius::Int64,
-                                                    transmission_age::Int64,
+                                                    phyto_transmission_age::Int64,
                                                     agent_pos::Tuple{Int64, Int64},
                                                     )
             end
@@ -197,7 +206,7 @@ module go
                 disease_functions.phytothera_impact(agent,
                                                     model,
                                                     agent.phytothera_infected::Bool,
-                                                    min_symptomatic_age::Int64,
+                                                    phyto_min_symptomatic_age::Int64,
                                                     phyto_symptoms_dev_prob::Float64,
                                                     phyto_mortality_prob,
                                                     gap_maker::Int64,
@@ -207,15 +216,15 @@ module go
                                                     model.previous_species::Vector{Float64},
                                                     model.previous_height::Vector{Float64},
                                                     agent.height::Float64,
-                                                    tree_ID::Int64,)
+                                                    tree_ID::Int64,
+                                                    grass::Bool,
+                                                    grass_invasion_prob::Float64,)
             end
         end 
 
         ## Rust (e.g. Myrtle rust)
         if rust == true && id_in_position(agent_pos, model::ABM{<:GridSpaceSingle}) != 0
             rust_infected::Bool = agent.rust_infected
-            #TODO: Make ages user input parameters
-            min_rust_symp_age::Int64 = 2 ## Time after infection that trees can start to show symptoms
 
             #* Spread the infection to non-infected target trees
             if rust_target[spec_num] == 1 && rust_infected == false
@@ -226,8 +235,8 @@ module go
             #* Apply the disease effects to infected trees
             if rust_infected == true
                 disease_functions.rust_impact(agent,
-                                              model,
-                                              min_rust_symp_age,
+                                              rust_infected,
+                                              rust_min_symptomatic_age,
                                               rust_symptoms_dev_prob,
                                               rust_mortality_prob,
                                               gap_maker,
@@ -237,7 +246,9 @@ module go
                                               model.previous_species,
                                               model.previous_height,
                                               agent.height,
-                                              tree_ID)
+                                              tree_ID,
+                                              grass,
+                                              grass_invasion_prob,)
             end
         end
     end
@@ -282,6 +293,9 @@ module go
                         seedling_mortality::Vector{Float64} = model.seedling_mortality,
                         sapling_mortality::Vector{Float64} = model.sapling_mortality,
                         seedling_transition::Vector{Float64} = model.seedling_transition,
+                        grass::Bool = model.grass,
+                        grass_invasion_prob::Float64 = model.grass_invasion_prob,
+                        grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
                         )
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
         grid = collect(positions(model))
@@ -298,18 +312,22 @@ module go
                                                   patch_ID,
                                                   n_species,
                                                   seedlings,
-                                                  saplings
+                                                  saplings,
+                                                  grass,
+                                                  grass_invasion_prob
                                                   )
         end
 
         #% BEYOND PATCH DISPERSAL-----------------------------------#
         if external_rain == true
-            demog_funcs.external_ldd(ext_dispersal_scenario,
-                                     grid,
-                                     n_species,
-                                     abundances,
-                                     external_species,
-                                     seedlings)
+            if (grass == true && rand() < grass_colonisation_prob) || grass == false
+                demog_funcs.external_ldd(ext_dispersal_scenario,
+                                        grid,
+                                        n_species,
+                                        abundances,
+                                        external_species,
+                                        seedlings,)
+            end
         end
 
         #% EXPAND FOREST GAPS---------------------------------------#
@@ -318,7 +336,9 @@ module go
         for ep in model.patch_ID[model.expand .== true]
             demog_funcs.expand_gap(ep,
                                    model,
-                                   grid)    
+                                   grid,
+                                   grass,
+                                   grass_invasion_prob)    
 
             model.expand[ep] = false
         end
