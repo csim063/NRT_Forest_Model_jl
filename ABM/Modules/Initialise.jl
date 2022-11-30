@@ -230,7 +230,6 @@ module Setup
             :seedlings => fill(Int64[], prod((dims, dims))),
             :saplings => fill(Int64[], prod((dims, dims))),
             :edge_weight => zeros(Float64, prod((dims, dims))),
-            :previous_species => zeros(Float64, prod((dims, dims))),
             :previous_height => zeros(Float64, prod((dims, dims))),
             :nhb_set => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
             :nhb_set_ids => fill(Int64[], prod((dims, dims))),

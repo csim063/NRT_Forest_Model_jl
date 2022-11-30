@@ -424,8 +424,6 @@ module demog_funcs
     of creating a forest gap (value = 1) or not (value = 0).
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`.
-    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
-    in the current model grid.
     - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
     in the current model grid.
     - `a_height::Float64`: Height in meters of the tree.
@@ -448,7 +446,6 @@ module demog_funcs
         base_mortality::Vector{Float64},
         gap_maker::Int64,
         expand::BitVector,
-        previous_species::Vector{Float64},
         previous_height::Vector{Float64},
         a_height::Float64,
         id::Int64,
@@ -483,8 +480,7 @@ module demog_funcs
                 expand[cell] = true
             end
 
-            ## Record dying tree species and height as a cell list
-            previous_species[cell] = species_ID
+            ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
             kill_agent!(id, model)
@@ -505,8 +501,7 @@ module demog_funcs
                 expand[cell] = true
             end
             
-            ## Record dying tree species and height as a cell list
-            previous_species[cell] = species_ID
+            ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
             kill_agent!(id, model)
@@ -552,7 +547,6 @@ module demog_funcs
             #* and species ID as a cell property and kill tree
             if model[i].pos[ax] == fall_dir
                 cell = model[i].patch_here_ID
-                model.previous_species[cell] = model[i].species_ID
                 model.previous_height[cell] = model[i].height
 
                 kill_agent!(model[i].id, model)
