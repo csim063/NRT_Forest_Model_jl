@@ -17,7 +17,6 @@
   - `expand_gap()`
   - `assign_demographics()`
   - Model stepping function
-- The current implementation of previous_species_ID lists is typed as `Vector{Float64}` but should be `Vector{Int64}`
 - Currently only the last previous species ID and height is recorded in each cell. This could easily be adapted to record all previous trees if desired.
 - Create a kill function to avoid duplicate code used every time a tree is killed
 - Currently in `regenerate_patch_bank()` new_saplings is used as the amount of individuals to add to both saplings and seedlings
@@ -29,6 +28,8 @@
 
 - Added grass as an optional factor. If grass is enabled there is a defined probablilty that grass may invade a patch after a tree dies and a gap establishes. If a patch has been invaded by grass any seeds
   landing there only have a probability (rather than a certainty) of establishing into a seedling during dispersal phases. Each dispersal phase and thus each seed entering patch in a step is tested independently.
+
+- Removed previous species for each patch as it is not used and can be accessed directly by data export if needed for analysis.
 
 ## Questions
 

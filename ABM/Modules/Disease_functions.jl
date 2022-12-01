@@ -87,8 +87,6 @@ module disease_functions
     - `cell::Int64`: Patch ID of cell where target tree is located
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`
-    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
-    in the current model grid.
     - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
     in the current model grid.
     - `a_height::Float64`: Height in meters of the tree.
@@ -104,7 +102,6 @@ module disease_functions
                                species_ID::Int64,
                                cell::Int64,
                                expand::BitVector,
-                               previous_species::Vector{Float64},
                                previous_height::Vector{Float64},
                                a_height::Float64,
                                id::Int64,
@@ -131,8 +128,7 @@ module disease_functions
                     expand[cell] = true
                 end
     
-                ## Record dying tree species and height as a cell list
-                previous_species[cell] = species_ID
+                ## Record dying tree height as a cell list
                 previous_height[cell] = a_height
     
                 kill_agent!(id, model)
@@ -192,8 +188,6 @@ module disease_functions
     - `cell::Int64`: Patch ID of cell where target tree is located
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`
-    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
-    in the current model grid.
     - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
     in the current model grid.
     - `a_height::Float64`: Height in meters of the tree.
@@ -208,7 +202,6 @@ module disease_functions
                          species_ID::Int64,
                          cell::Int64,
                          expand::BitVector,
-                         previous_species::Vector{Float64},
                          previous_height::Vector{Float64},
                          a_height::Float64,
                          id::Int64,
@@ -235,8 +228,7 @@ module disease_functions
                     expand[cell] = true
                 end
     
-                ## Record dying tree species and height as a cell list
-                previous_species[cell] = species_ID
+                ## Record dying tree height as a cell list
                 previous_height[cell] = a_height
     
                 kill_agent!(id, model)
