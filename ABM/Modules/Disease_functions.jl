@@ -131,10 +131,13 @@ module disease_functions
                 ## Record dying tree height as a cell list
                 previous_height[cell] = a_height
     
-                kill_agent!(id, model)
-                if grass == true && rand() < grass_invasion_prob
-                    model.grass_flag[cell] = true
-                end
+                set_get_functions.kill_tree(
+                        id,
+                        model,
+                        grass,
+                        grass_invasion_prob,
+                        cell,
+                )
             end    
         end
     end
@@ -231,10 +234,13 @@ module disease_functions
                 ## Record dying tree height as a cell list
                 previous_height[cell] = a_height
     
-                kill_agent!(id, model)
-                if grass == true && rand() < grass_invasion_prob
-                    model.grass_flag[cell] = true
-                end
+                set_get_functions.kill_tree(
+                    id,
+                    model,
+                    grass,
+                    grass_invasion_prob,
+                    cell,
+                )
             end    
         end
     end

@@ -312,5 +312,32 @@ module set_get_functions
 
         return D_nhbs::Vector{Tuple{Int64, Int64}}
     end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% KILL AGENT
+    """
+    # Kill tree
+    Function kills tree by removing it from the model grid and then checks whether the newly empty
+    patch is invaded by grass or not.
+    ## Arguments:
+    - `agent_ID::Int64`: ID of tree to kill
+    - `model`: The AgentBasedModel object defining the current model. This object is usually
+        created using `Agents.ABM()`.
+    - `grass::Bool`: Whether grass is present in the model or not
+    - `grass_invasion_prob::Float64`: Probability of grass invasion if patch is empty
+    - `cell::Int64`: Patch_ID of cell where tree that dies is located
+    """
+    function kill_tree(
+        agent_ID::Int64,
+        model::ABM{<:GridSpaceSingle},
+        grass::Bool,
+        grass_invasion_prob::Float64,
+        cell::Int64
+    )
+        kill_agent!(agent_ID, model)
+        if grass == true && rand() < grass_invasion_prob
+            model.grass_flag[cell] = true
+        end
+    end
 end
 

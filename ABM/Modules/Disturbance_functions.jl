@@ -85,10 +85,13 @@ module disturbance_functions
             for p in p_ID[disturbed .== true]
                 a_ID = id_in_position(grid[p], model::ABM{<:GridSpaceSingle})
                 if a_ID ≠ 0
-                    kill_agent!(a_ID, model)
-                    if grass == true && rand() < grass_invasion_prob
-                        model.grass_flag[cell] = true
-                    end
+                    set_get_functions.kill_tree(
+                        a_ID,
+                        model,
+                        grass,
+                        grass_invasion_prob,
+                        cell,
+                    )
                 end
 
                 #* Reset seedlings and saplings to 0

@@ -483,10 +483,13 @@ module demog_funcs
             ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
-            kill_agent!(id, model)
-            if grass == true && rand() < grass_invasion_prob
-                model.grass_flag[cell] = true
-            end
+            set_get_functions.kill_tree(
+                id,
+                model,
+                grass,
+                grass_invasion_prob,
+                cell,
+                )
             return
 
         #% MORTAILTY DUE TO AGE AND SUPPRESSION---------------------#
@@ -504,10 +507,13 @@ module demog_funcs
             ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
-            kill_agent!(id, model)
-            if grass == true && rand() < grass_invasion_prob
-                model.grass_flag[cell] = true
-            end
+            set_get_functions.kill_tree(
+                id,
+                model,
+                grass,
+                grass_invasion_prob,
+                cell,
+                )
             return
         end
     end
@@ -548,11 +554,14 @@ module demog_funcs
             if model[i].pos[ax] == fall_dir
                 cell = model[i].patch_here_ID
                 model.previous_height[cell] = model[i].height
-
-                kill_agent!(model[i].id, model)
-                if grass == true && rand() < grass_invasion_prob
-                    model.grass_flag[cell] = true
-                end
+                
+                set_get_functions.kill_tree(
+                        model[i].id,
+                        model,
+                        grass,
+                        grass_invasion_prob,
+                        cell,
+                        )
             end
         end
     end
