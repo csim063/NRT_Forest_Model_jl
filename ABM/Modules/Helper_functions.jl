@@ -141,22 +141,26 @@ module set_get_functions
             s_heights = Float64[]
             agent = model[id_in_position(grid[cell_ID], model::ABM{<:GridSpaceSingle})]
             focal_height = agent.height
+            focal_pos = agent.pos
 
             #% ITERATE OVER EACH CHOSEN DISTANCE FROM TARGET CELL---#
-            for n in 1:shell_width
+            for n in getindex(shell_width)
                 ## If distance greater than one find only the targets at exactly that distance
+                ## TODO try ∉ approach to remove setdiff
                 if n ≠ 1
-                    for idx in setdiff(nearby_ids(agent.pos, model, n), 
-                                    nearby_ids(agent.pos, model, n-1))
-                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
-                            push!(s_heights, model[idx].height)
+                    for idx in setdiff(nearby_ids(focal_pos, model, n), 
+                                    nearby_ids(focal_pos, model, n-1))
+                        idx_height = model[idx].height
+                        if idx_height > crit_heights[n] && idx_height > focal_height
+                            push!(s_heights, idx_height)
                         end
                     end
                 ## If distance one just look for agents at distance one (more efficient)
                 else
-                    for idx in nearby_ids(agent.pos, model, 1)
-                        if model[idx].height > crit_heights[n] && model[idx].height > focal_height
-                            push!(s_heights, model[idx].height)
+                    for idx in nearby_ids(focal_pos, model, 1)
+                        idx_height = model[idx].height
+                        if idx_height > crit_heights[n] && idx_height > focal_height
+                            push!(s_heights, idx_height)
                         end
                     end
                 end
@@ -270,4 +274,70 @@ module set_get_functions
             end
         end
     end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% GET NEIGHBOURS AT SPECIFIC DISTANCE
+    #TODO CORRECT DOCUMENTAION
+    """
+    # Get neighbours at specific distance
+    Function to get the patch_IDs of all neighbours at a specific distance from the focal cell.
+    ## Arguments:
+    - `pos::Tuple{Int64, Int64}`: Position of focal cell
+    - `model`: The AgentBasedModel object defining the current model. This object is usually
+        created using `Agents.ABM()`.
+    - `D::Int64`: Distance from focal cell to get neighbours
+    ## Return
+    - Vector{Tuple{Int64, Int64}}, patch positions of all neighbours at distance `D` from focal cell
+    ## Examples
+    ```julia-repl
+    julia> positions_at((1,1), model, 1)
+    [(1, 2), (2, 1), (2, 2)]
+    ```
+    """ 
+    function positions_at(
+        pos::Tuple{Int64, Int64},
+        model::ABM{<:GridSpaceSingle},
+        D::Int64
+    )
+        #TODO: Try use nearby_positions() source code altered to only return positions at distance D
+
+        a = collect(nearby_positions(pos::Tuple{Int64, Int64}, 
+                                    model::ABM{<:GridSpaceSingle}, 
+                                    (D::Int64-1)));
+
+        D_nhbs = collect(nearby_positions(pos::Tuple{Int64, Int64}, 
+                                        model::ABM{<:GridSpaceSingle}, 
+                                        D::Int64));
+        setdiff!(D_nhbs::Vector{Tuple{Int64, Int64}}, a::Vector{Tuple{Int64, Int64}})
+
+        return D_nhbs::Vector{Tuple{Int64, Int64}}
+    end
+
+    #//-------------------------------------------------------------------------------------------#
+    #% KILL AGENT
+    """
+    # Kill tree
+    Function kills tree by removing it from the model grid and then checks whether the newly empty
+    patch is invaded by grass or not.
+    ## Arguments:
+    - `agent_ID::Int64`: ID of tree to kill
+    - `model`: The AgentBasedModel object defining the current model. This object is usually
+        created using `Agents.ABM()`.
+    - `grass::Bool`: Whether grass is present in the model or not
+    - `grass_invasion_prob::Float64`: Probability of grass invasion if patch is empty
+    - `cell::Int64`: Patch_ID of cell where tree that dies is located
+    """
+    function kill_tree(
+        agent_ID::Int64,
+        model::ABM{<:GridSpaceSingle},
+        grass::Bool,
+        grass_invasion_prob::Float64,
+        cell::Int64
+    )
+        kill_agent!(agent_ID, model)
+        if grass == true && rand() < grass_invasion_prob
+            model.grass_flag[cell] = true
+        end
+    end
 end
+

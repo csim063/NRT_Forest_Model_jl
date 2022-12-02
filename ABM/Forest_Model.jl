@@ -30,7 +30,7 @@ record_every_n_ticks = 5
 export_data = false
 export_file_name = "test"
 report_time = true
-visualisation_type = "video"
+visualisation_type = "static"
 video_export_name = "NRT_Video"
 
 #//-----------------------------------------------------------------------------------------------#
@@ -62,7 +62,23 @@ model = Setup.forest_model(forest_area = 4,
                         macro_litter_effect = 0.10,
                         ddm = false,
                         restoration_planting = false,
-                        planting_frequency = 10
+                        grass = false,
+                        grass_invasion_prob = 0.5,
+                        grass_colonisation_prob = 0.5,
+                        planting_frequency = 10,
+                        phytothera = false, # Whether to include phytothera disease in the model
+                        phyto_global_infection_prob = 0.0001,
+                        phyto_local_infection_prob = 0.001,
+                        phyto_infectious_radius = 1,
+                        phyto_symptoms_dev_prob = 0.1,
+                        phyto_mortality_prob = 0.1,
+                        phyto_transmission_age = 5,
+                        phyto_min_symptomatic_age = 5,
+                        rust = false, # Whether to include rust disease in the model
+                        rust_global_infection_prob = 0.0001,
+                        rust_symptoms_dev_prob = 0.1,
+                        rust_mortality_prob = 0.1,
+                        rust_min_symptomatic_age = 5,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

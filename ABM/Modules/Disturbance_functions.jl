@@ -46,7 +46,9 @@ module disturbance_functions
         p_ID::Vector{Int64},
         n_species::Int64,
         seedlings::Vector{Vector{Int64}},
-        saplings::Vector{Vector{Int64}}
+        saplings::Vector{Vector{Int64}},
+        grass::Bool,
+        grass_invasion_prob::Float64,
     )
         ## Check if a disturbance has occurred this tick
         if rand(Uniform(0,1)) < disturbance_freq
@@ -83,7 +85,13 @@ module disturbance_functions
             for p in p_ID[disturbed .== true]
                 a_ID = id_in_position(grid[p], model::ABM{<:GridSpaceSingle})
                 if a_ID ≠ 0
-                    kill_agent!(a_ID, model)
+                    set_get_functions.kill_tree(
+                        a_ID,
+                        model,
+                        grass,
+                        grass_invasion_prob,
+                        cell,
+                    )
                 end
 
                 #* Reset seedlings and saplings to 0

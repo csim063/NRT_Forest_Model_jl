@@ -236,15 +236,17 @@ module demog_funcs
                                             .* (ldd_disp_frac)))
 
         #% LOOP THROUGH ALL SEEDS AND ASSIGN TO A CELL--------------#
+        #Threads.@threads for _ in 1:ldd_seeds
         for _ in 1:ldd_seeds
             #Calculate appropriate distance
-            D = trunc(rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
+            D = trunc(Int, rand(Exponential((ldd_dispersal_dist) ./ cell_grain)));
             
+            #TODO Move this documentation to the top of the function
             #* Find cells at distance D only. To do this currently we find all the
             #* cells within distance D and remove the ones also within distance D-1
-            a = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, (D-1)));
-            b = collect(nearby_positions(pos, model::ABM{<:GridSpaceSingle}, D));
-            D_nhbs = setdiff(b,a);
+            D_nhbs = set_get_functions.positions_at(pos::Tuple{Int64,Int64}, 
+                                                    model::ABM{<:GridSpaceSingle}, 
+                                                    D::Int64,)
 
             ## If there are avaible cells select one to be the target
             target = Int64[]
@@ -313,7 +315,7 @@ module demog_funcs
         ldd_disperse = map(fun,ldd_abundances, external_species)
 
         #% DISPERSE SEEDS-------------------------------------------#
-        for s in eachindex(n_species)
+        Threads.@threads for s in eachindex(n_species)
             for i in eachindex(ldd_disperse)
                 for _ in 1:ldd_disperse[i]
                     seedlings[rand(1:length(grid))][s] += 1
@@ -418,12 +420,10 @@ module demog_funcs
     - `species_ID::Int64`: Selected species ID.
     - `base_mortality::Vector{Float64}`: Species specific background mortaility rate. Provided as a
     probability (0-1) of a tree dying in anyone tick.
-    - `gap_maker::Vector{Int64}`: Species specific property indicating whether a species is capable 
+    - `gap_maker::Int64`: Species specific property indicating whether a species is capable 
     of creating a forest gap (value = 1) or not (value = 0).
     - `expand::BitVector`: Flag indicating that a patch should be checked for gap expansion 
     (value = 1) or not (value = 0). See `expand_gap()`.
-    - `previous_species::Vector{Float64}`: Species ID of the last tree to have occupied every cell 
-    in the current model grid.
     - `previous_height::Vector{Float64}`: Final height of the last tree to have occupied every cell 
     in the current model grid.
     - `a_height::Float64`: Height in meters of the tree.
@@ -434,6 +434,8 @@ module demog_funcs
     - `supp_tolerance::Vector{Float64}`: Species specific suppression tolerance
     - `supp_mortality::Vector{Float64}`: Species specific probability of mortality due to 
     suppression 
+    - `grass::Bool`: Boolean indicating whether grass is present in the model or not
+    - `grass_invasion_prob::Float64`: Probability of grass invading a patch
     """
     function death(
         agent,
@@ -442,16 +444,17 @@ module demog_funcs
         ddm::Bool,
         species_ID::Int64,
         base_mortality::Vector{Float64},
-        gap_maker::Vector{Int64},
+        gap_maker::Int64,
         expand::BitVector,
-        previous_species::Vector{Float64},
         previous_height::Vector{Float64},
         a_height::Float64,
         id::Int64,
         age::Float64,
         previous_growth::Vector{Float64},
         supp_tolerance::Vector{Float64},
-        supp_mortality::Vector{Float64}
+        supp_mortality::Vector{Float64},
+        grass::Bool,
+        grass_invasion_prob::Float64,
     )
         ## Define a mortality weighting
         mort_w = 1
@@ -473,15 +476,20 @@ module demog_funcs
         #* Approximates the standard gap mortality model 
         #* (see Keane et al. 2001)
         if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
 
-            ## Record dying tree species and height as a cell list
-            previous_species[cell] = species_ID
+            ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
-            kill_agent!(id, model)
+            set_get_functions.kill_tree(
+                id,
+                model,
+                grass,
+                grass_invasion_prob,
+                cell,
+                )
             return
 
         #% MORTAILTY DUE TO AGE AND SUPPRESSION---------------------#
@@ -492,15 +500,20 @@ module demog_funcs
             mean(previous_growth) < supp_tolerance[species_ID] &&
             rand(Uniform(0.0, 1.0)) < supp_mortality[species_ID]
             )
-            if gap_maker[species_ID] == 1
+            if gap_maker == 1
                 expand[cell] = true
             end
             
-            ## Record dying tree species and height as a cell list
-            previous_species[cell] = species_ID
+            ## Record dying tree height as a cell list
             previous_height[cell] = a_height
 
-            kill_agent!(id, model)
+            set_get_functions.kill_tree(
+                id,
+                model,
+                grass,
+                grass_invasion_prob,
+                cell,
+                )
             return
         end
     end
@@ -522,7 +535,9 @@ module demog_funcs
     function expand_gap(
         cell_ID::Int64,
         model,
-        grid::Matrix{Tuple{Int64, Int64}}
+        grid::Matrix{Tuple{Int64, Int64}},
+        grass::Bool,
+        grass_invasion_prob::Float64,
     )
         #* Calculate the number of cells over which the dying tree may fall
         h = trunc(Int64, (model.previous_height[cell_ID] / model.cell_grain) + 1)
@@ -538,10 +553,15 @@ module demog_funcs
             #* and species ID as a cell property and kill tree
             if model[i].pos[ax] == fall_dir
                 cell = model[i].patch_here_ID
-                model.previous_species[cell] = model[i].species_ID
                 model.previous_height[cell] = model[i].height
-
-                kill_agent!(model[i].id, model)
+                
+                set_get_functions.kill_tree(
+                        model[i].id,
+                        model,
+                        grass,
+                        grass_invasion_prob,
+                        cell,
+                        )
             end
         end
     end
@@ -580,7 +600,6 @@ module demog_funcs
     """
     function capture_gap(
         cell_ID::Vector{Int64},
-        model,
         seedlings::Vector{Vector{Int64}},
         saplings::Vector{Vector{Int64}},
         nhb_light::Vector{Float64},
@@ -590,10 +609,11 @@ module demog_funcs
         b3_jabowas::Vector{Float64},
         last_change_tick::Vector{Int64},
         tick::Int64,
-        n_changes::Vector{Int64}
+        n_changes::Vector{Int64},
+        new_agents_list
     )
         seedlings = seedlings[cell_ID]
-        saplings = saplings[cell_ID] 
+        saplings = saplings[cell_ID]
 
         #% ASSESS WHETHER TO CAPTURE GAP----------------------------#
         #? 0.25 is probability of one sapling becoming an adult
@@ -607,7 +627,7 @@ module demog_funcs
             #% DEFINE NEW TREE/AGENT--------------------------------#
             new_species_id = distribution_functions.lottery(regenbank_wgt, true)
             new_species_id = new_species_id !== nothing ? new_species_id : rand(1:length(seedlings))
-            ## For trees
+            #% For trees
             if growth_forms[new_species_id] == 1
                 #* dbh (in m) of 0.01 m (1 cm) + noise (0, 0.01)
                 dbh = 0.01 .+ rand(Uniform(0, 0.01))
@@ -615,7 +635,7 @@ module demog_funcs
                 b3 = b3_jabowas[new_species_id]
                 height = 1.37 .+ (b2 .* dbh) .- (b3 .* dbh .* dbh)
                 age = 1.0
-            #For tree-ferns
+            #%For tree-ferns
             elseif growth_forms[new_species_id] == 2
                 dbh = 0.01 .+ rand(Uniform(0, 0.01))
                 height = 1.5 .+ rand(Uniform(0, 0.1))
@@ -633,9 +653,9 @@ module demog_funcs
                         growth_forms[new_species_id],
                         height,
                         dbh,
-                        age]
+                        age,]
 
-            push!(model.new_agents_list, new_agent)
+            push!(new_agents_list, new_agent)
 
             #% EMPTY REGENERATION BANK------------------------------#
             seedlings = seedlings .- seedlings
