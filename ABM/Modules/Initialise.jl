@@ -55,6 +55,97 @@ module Setup
     end
 
     #//-------------------------------------------------------------------------------------------#
+    Base.@kwdef mutable struct Parameters
+        #% PATCH VARIABLES----------------------------#
+        patch_ID::Vector{Int64}
+        pcor::Vector{Vector{Tuple{Int64, Int64}}}
+        seedlings::Vector{Vector{Int64}}
+        saplings::Vector{Vector{Int64}}
+        edge_weight::Vector{Float64}
+        previous_height::Vector{Float64}
+        nhb_set::Vector{Vector{Tuple{Int64, Int64}}}
+        nhb_set_ids::Vector{Vector{Int64}}
+        close_nhbs_count::Vector{Int64} #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
+        nhb_shade_height::Vector{Float64}
+        nhb_light::Vector{Float64}
+        disturbed::BitVector
+        expand::BitVector
+        grass_flag::BitVector
+        last_change_tick::Vector{Int64}
+        n_changes::Vector{Int64}
+        seedling_density::Vector{Int64}
+        sapling_density::Vector{Int64}
+        #% GLOBAL VARIABLES---------------------------#
+        tick = zero(1)
+        n_species::Int64
+        seedling_survival::Vector{Float64}
+        sapling_survival::Vector{Float64}
+        seedling_transition::Vector{Float64}
+        seedling_mortality::Vector{Float64}
+        sapling_mortality::Vector{Float64}
+        seedling_inhibition::Vector{Int64}
+        abundances::Vector{Int64}
+        edge_b0::Int64
+        edge_b1::Int64
+        growth_forms::Vector{Int64}
+        g_jabowas::Vector{Float64}
+        max_heights::Vector{Int64}
+        max_dbhs::Vector{Float64}
+        max_ages::Vector{Int64}
+        shell_layers::Int64
+        shell_layers_count::Vector{Int64}
+        base_mortality::Vector{Float64}
+        b2_jabowas::Vector{Float64}
+        b3_jabowas::Vector{Float64}
+        repro_ages::Vector{Int64}
+        repro_heights::Vector{Float64}
+        seed_prod::Vector{Int64}
+        ldd_dispersal_fracs::Vector{Float64}
+        ldd_dispersal_dist::Vector{Int64}
+        regen_heights::Vector{Int64}
+        external_species::Vector{Float64}
+        herbivory_amount::Vector{Float64}
+        supp_tolerance::Vector{Float64}
+        supp_mortality::Vector{Float64}
+        gap_maker::Vector{Int64}
+        shade_tolerance::Vector{Float64}
+        saplings_to_plant::Vector{Int64}
+        max_density::Int64
+        phytothera_target::Vector{Int64}
+        rust_target::Vector{Int64}
+        #% USER INPUTS--------------------------------#
+        cell_grain::Int64
+        disturbance_freq::Float64
+        max_disturb_size::Float64
+        comp_multiplier::Float64
+        edge_effects::Bool
+        edge_responses::Vector{Float64}
+        external_rain::Bool
+        ext_dispersal_scenario::String
+        herbivory::Bool
+        saplings_eaten::Bool
+        macro_litter_effect::Float64
+        ddm::Bool
+        restoration_planting::Bool
+        grass::Bool
+        grass_invasion_prob::Float64
+        grass_colonisation_prob::Float64
+        planting_frequency::Int64
+        phytothera::Bool
+        phyto_global_prob::Float64
+        phyto_local_prob::Float64
+        phyto_infectious_radius::Int64
+        phyto_symptoms_dev_prob::Float64
+        phyto_mortality_prob::Float64
+        phyto_transmission_age::Int64
+        phyto_min_symptomatic_age::Int64
+        rust::Bool
+        rust_global_infection_prob::Float64
+        rust_symptoms_dev_prob::Float64
+        rust_mortality_prob::Float64
+        rust_min_symptomatic_age::Int64
+    end
+
     #% DEFINE WORLD
     """
     This is the primary setup function. It defines all the values of the model, including the 
@@ -223,95 +314,186 @@ module Setup
         rust_target = demography_df.susceptible_rust::Vector{Int64}
 
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
-        properties = Dict(
+        # properties = Dict(
+        #     #% PATCH VARIABLES----------------------------#
+        #     :patch_ID => zeros(Int64, prod((dims, dims))),
+        #     :pcor => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+        #     :seedlings => fill(Int64[], prod((dims, dims))),
+        #     :saplings => fill(Int64[], prod((dims, dims))),
+        #     :edge_weight => zeros(Float64, prod((dims, dims))),
+        #     :previous_height => zeros(Float64, prod((dims, dims))),
+        #     :nhb_set => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+        #     :nhb_set_ids => fill(Int64[], prod((dims, dims))),
+        #     :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
+        #     :nhb_shade_height => zeros(Float64, prod((dims, dims))),
+        #     :nhb_light => zeros(Float64, prod((dims, dims))),
+        #     :disturbed => falses(prod((dims, dims))),
+        #     :expand => falses(prod((dims, dims))),
+        #     :grass_flag => falses(prod((dims, dims))),
+        #     :last_change_tick => zeros(Int64, prod((dims, dims))),
+        #     :n_changes => zeros(Int64, prod((dims, dims))),
+        #     :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
+        #     :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
+        #     #% GLOBAL VARIABLES---------------------------#
+        #     :tick => zero(1),
+        #     :n_species => n_species::Int64,
+        #     :seedling_survival => seedling_survival::Vector{Float64},
+        #     :sapling_survival => sapling_survival::Vector{Float64},
+        #     :seedling_transition => seedling_transition::Vector{Float64},
+        #     :seedling_mortality => seedling_mortality::Vector{Float64},
+        #     :sapling_mortality => sapling_mortality::Vector{Float64},
+        #     :seedling_inhibition => seedling_inhibition::Vector{Int64},
+        #     :abundances => zeros(Int64, n_species),
+        #     :edge_b0 => edge_b0::Int64,
+        #     :edge_b1 => edge_b1::Int64,
+        #     :growth_forms => growth_forms::Vector{Int64},
+        #     :g_jabowas => g_jabowas::Vector{Float64},
+        #     :max_heights => max_heights::Vector{Int64},
+        #     :max_dbhs => max_dbhs::Vector{Float64},
+        #     :max_ages => max_ages::Vector{Int64},
+        #     :shell_layers => Int64(max_shell),
+        #     :shell_layers_count => collect(range(0, 32, step = 4))::Vector{Int64},
+        #     :base_mortality => base_mortality::Vector{Float64},
+        #     :b2_jabowas => b2_jabowas::Vector{Float64},
+        #     :b3_jabowas => b3_jabowas::Vector{Float64},
+        #     :repro_ages => repro_ages::Vector{Int64},
+        #     :repro_heights => repro_heights::Vector{Float64},
+        #     :seed_prod => seed_prod::Vector{Int64},
+        #     :ldd_dispersal_fracs => ldd_dispersal_fracs::Vector{Float64},
+        #     :ldd_dispersal_dist => ldd_dispersal_dist::Vector{Int64},
+        #     :regen_heights => regen_heights::Vector{Int64},
+        #     :external_species => external_species::Vector{Float64},
+        #     :herbivory_amount => herbivory_amount::Vector{Float64},
+        #     :supp_tolerance => supp_tolerance::Vector{Float64},
+        #     :supp_mortality => supp_mortality::Vector{Float64},
+        #     :gap_maker => gap_maker::Vector{Int64},
+        #     :shade_tolerance => shade_tolerance::Vector{Float64},
+        #     :saplings_to_plant => saplings_to_plant::Vector{Int64},
+        #     :max_density => sap_density::Int64,
+        #     :phytothera_target => phytothera_target::Vector{Int64},
+        #     :rust_target => rust_target::Vector{Int64},
+        #     #% USER INPUTS--------------------------------#
+        #     :cell_grain => cell_grain::Int64,
+        #     :disturbance_freq => disturb_freq::Float64,
+        #     :max_disturb_size => max_disturb_size::Float64,
+        #     :comp_multiplier => comp_multiplier::Float64,
+        #     :edge_effects => edge_effects::Bool,
+        #     :edge_responses => edge_responses::Vector{Float64},
+        #     :external_rain => external_rain::Bool,
+        #     :ext_dispersal_scenario => ext_dispersal_scenario::String,
+        #     :herbivory => herbivory::Bool,
+        #     :saplings_eaten => saplings_eaten::Bool,
+        #     :macro_litter_effect => macro_litter_effect::Float64,
+        #     :ddm => ddm::Bool,
+        #     :restoration_planting => restoration_planting::Bool,
+        #     :grass => grass::Bool,
+        #     :grass_invasion_prob => grass_invasion_prob::Float64,
+        #     :grass_colonisation_prob => grass_colonisation_prob::Float64,
+        #     :planting_frequency => planting_frequency::Int64,
+        #     :phytothera => phytothera::Bool,
+        #     :phyto_global_prob => phyto_global_infection_prob::Float64,
+        #     :phyto_local_prob => phyto_local_infection_prob::Float64,
+        #     :phyto_infectious_radius => phyto_infectious_radius::Int64,
+        #     :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
+        #     :phyto_mortality_prob => phyto_mortality_prob::Float64,
+        #     :phyto_transmission_age => phyto_transmission_age::Int64,
+        #     :phyto_min_symptomatic_age => phyto_min_symptomatic_age::Int64,
+        #     :rust => rust::Bool,
+        #     :rust_global_infection_prob => rust_global_infection_prob::Float64,
+        #     :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
+        #     :rust_mortality_prob => rust_mortality_prob::Float64,
+        #     :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
+        # )
+
+        properties = Parameters(
             #% PATCH VARIABLES----------------------------#
-            :patch_ID => zeros(Int64, prod((dims, dims))),
-            :pcor => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
-            :seedlings => fill(Int64[], prod((dims, dims))),
-            :saplings => fill(Int64[], prod((dims, dims))),
-            :edge_weight => zeros(Float64, prod((dims, dims))),
-            :previous_height => zeros(Float64, prod((dims, dims))),
-            :nhb_set => fill(Tuple{Int64, Int64}[], prod((dims, dims))),
-            :nhb_set_ids => fill(Int64[], prod((dims, dims))),
-            :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
-            :nhb_shade_height => zeros(Float64, prod((dims, dims))),
-            :nhb_light => zeros(Float64, prod((dims, dims))),
-            :disturbed => falses(prod((dims, dims))),
-            :expand => falses(prod((dims, dims))),
-            :grass_flag => falses(prod((dims, dims))),
-            :last_change_tick => zeros(Int64, prod((dims, dims))),
-            :n_changes => zeros(Int64, prod((dims, dims))),
-            :seedling_density => fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
-            :sapling_density => fill(sap_density, prod((dims, dims))), #Same as above
+            zeros(Int64, prod((dims, dims))),
+            fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+            fill(Int64[], prod((dims, dims))),
+            fill(Int64[], prod((dims, dims))),
+            zeros(Float64, prod((dims, dims))),
+            zeros(Float64, prod((dims, dims))),
+            fill(Tuple{Int64, Int64}[], prod((dims, dims))),
+            fill(Int64[], prod((dims, dims))),
+            zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
+            zeros(Float64, prod((dims, dims))),
+            zeros(Float64, prod((dims, dims))),
+            falses(prod((dims, dims))),
+            falses(prod((dims, dims))),
+            falses(prod((dims, dims))),
+            zeros(Int64, prod((dims, dims))),
+            zeros(Int64, prod((dims, dims))),
+            fill(seed_density, prod((dims, dims))), #Could maybe be remvoed and made a reporter using seedlings 
+            fill(sap_density, prod((dims, dims))), #Same as above
             #% GLOBAL VARIABLES---------------------------#
-            :tick => zero(1),
-            :n_species => n_species::Int64,
-            :seedling_survival => seedling_survival::Vector{Float64},
-            :sapling_survival => sapling_survival::Vector{Float64},
-            :seedling_transition => seedling_transition::Vector{Float64},
-            :seedling_mortality => seedling_mortality::Vector{Float64},
-            :sapling_mortality => sapling_mortality::Vector{Float64},
-            :seedling_inhibition => seedling_inhibition::Vector{Int64},
-            :abundances => zeros(Int64, n_species),
-            :edge_b0 => edge_b0::Int64,
-            :edge_b1 => edge_b1::Int64,
-            :growth_forms => growth_forms::Vector{Int64},
-            :g_jabowas => g_jabowas::Vector{Float64},
-            :max_heights => max_heights::Vector{Int64},
-            :max_dbhs => max_dbhs::Vector{Float64},
-            :max_ages => max_ages::Vector{Int64},
-            :shell_layers => Int64(max_shell),
-            :shell_layers_count => collect(range(0, 32, step = 4))::Vector{Int64},
-            :base_mortality => base_mortality::Vector{Float64},
-            :b2_jabowas => b2_jabowas::Vector{Float64},
-            :b3_jabowas => b3_jabowas::Vector{Float64},
-            :repro_ages => repro_ages::Vector{Int64},
-            :repro_heights => repro_heights::Vector{Float64},
-            :seed_prod => seed_prod::Vector{Int64},
-            :ldd_dispersal_fracs => ldd_dispersal_fracs::Vector{Float64},
-            :ldd_dispersal_dist => ldd_dispersal_dist::Vector{Int64},
-            :regen_heights => regen_heights::Vector{Int64},
-            :external_species => external_species::Vector{Float64},
-            :herbivory_amount => herbivory_amount::Vector{Float64},
-            :supp_tolerance => supp_tolerance::Vector{Float64},
-            :supp_mortality => supp_mortality::Vector{Float64},
-            :gap_maker => gap_maker::Vector{Int64},
-            :shade_tolerance => shade_tolerance::Vector{Float64},
-            :saplings_to_plant => saplings_to_plant::Vector{Int64},
-            :max_density => sap_density::Int64,
-            :phytothera_target => phytothera_target::Vector{Int64},
-            :rust_target => rust_target::Vector{Int64},
+            zero(1),
+            n_species::Int64,
+            seedling_survival::Vector{Float64},
+            sapling_survival::Vector{Float64},
+            seedling_transition::Vector{Float64},
+            seedling_mortality::Vector{Float64},
+            sapling_mortality::Vector{Float64},
+            seedling_inhibition::Vector{Int64},
+            zeros(Int64, n_species),
+            edge_b0::Int64,
+            edge_b1::Int64,
+            growth_forms::Vector{Int64},
+            g_jabowas::Vector{Float64},
+            max_heights::Vector{Int64},
+            max_dbhs::Vector{Float64},
+            max_ages::Vector{Int64},
+            Int64(max_shell),
+            collect(range(0, 32, step = 4))::Vector{Int64},
+            base_mortality::Vector{Float64},
+            b2_jabowas::Vector{Float64},
+            b3_jabowas::Vector{Float64},
+            repro_ages::Vector{Int64},
+            repro_heights::Vector{Float64},
+            seed_prod::Vector{Int64},
+            ldd_dispersal_fracs::Vector{Float64},
+            ldd_dispersal_dist::Vector{Int64},
+            regen_heights::Vector{Int64},
+            external_species::Vector{Float64},
+            herbivory_amount::Vector{Float64},
+            supp_tolerance::Vector{Float64},
+            supp_mortality::Vector{Float64},
+            gap_maker::Vector{Int64},
+            shade_tolerance::Vector{Float64},
+            saplings_to_plant::Vector{Int64},
+            sap_density::Int64,
+            phytothera_target::Vector{Int64},
+            rust_target::Vector{Int64},
             #% USER INPUTS--------------------------------#
-            :cell_grain => cell_grain::Int64,
-            :disturbance_freq => disturb_freq::Float64,
-            :max_disturb_size => max_disturb_size::Float64,
-            :comp_multiplier => comp_multiplier::Float64,
-            :edge_effects => edge_effects::Bool,
-            :edge_responses => edge_responses::Vector{Float64},
-            :external_rain => external_rain::Bool,
-            :ext_dispersal_scenario => ext_dispersal_scenario::String,
-            :herbivory => herbivory::Bool,
-            :saplings_eaten => saplings_eaten::Bool,
-            :macro_litter_effect => macro_litter_effect::Float64,
-            :ddm => ddm::Bool,
-            :restoration_planting => restoration_planting::Bool,
-            :grass => grass::Bool,
-            :grass_invasion_prob => grass_invasion_prob::Float64,
-            :grass_colonisation_prob => grass_colonisation_prob::Float64,
-            :planting_frequency => planting_frequency::Int64,
-            :phytothera => phytothera::Bool,
-            :phyto_global_prob => phyto_global_infection_prob::Float64,
-            :phyto_local_prob => phyto_local_infection_prob::Float64,
-            :phyto_infectious_radius => phyto_infectious_radius::Int64,
-            :phyto_symptoms_dev_prob => phyto_symptoms_dev_prob::Float64,
-            :phyto_mortality_prob => phyto_mortality_prob::Float64,
-            :phyto_transmission_age => phyto_transmission_age::Int64,
-            :phyto_min_symptomatic_age => phyto_min_symptomatic_age::Int64,
-            :rust => rust::Bool,
-            :rust_global_infection_prob => rust_global_infection_prob::Float64,
-            :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
-            :rust_mortality_prob => rust_mortality_prob::Float64,
-            :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
+            cell_grain::Int64,
+            disturb_freq::Float64,
+            max_disturb_size::Float64,
+            comp_multiplier::Float64,
+            edge_effects::Bool,
+            edge_responses::Vector{Float64},
+            external_rain::Bool,
+            ext_dispersal_scenario::String,
+            herbivory::Bool,
+            saplings_eaten::Bool,
+            macro_litter_effect::Float64,
+            ddm::Bool,
+            restoration_planting::Bool,
+            grass::Bool,
+            grass_invasion_prob::Float64,
+            grass_colonisation_prob::Float64,
+            planting_frequency::Int64,
+            phytothera::Bool,
+            phyto_global_infection_prob::Float64,
+            phyto_local_infection_prob::Float64,
+            phyto_infectious_radius::Int64,
+            phyto_symptoms_dev_prob::Float64,
+            phyto_mortality_prob::Float64,
+            phyto_transmission_age::Int64,
+            phyto_min_symptomatic_age::Int64,
+            rust::Bool,
+            rust_global_infection_prob::Float64,
+            rust_symptoms_dev_prob::Float64,
+            rust_mortality_prob::Float64,
+            rust_min_symptomatic_age::Int64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
