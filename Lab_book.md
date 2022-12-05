@@ -31,6 +31,8 @@
 
 - Removed previous species for each patch as it is not used and can be accessed directly by data export if needed for analysis.
 
+- Added an adult mortality rate resulting from (pest) herbivory. The adult mortality is calculated using a species specific mean (defined in demography.txt) and user defined variabilty to draw a value from a normal distribution. This value is then tested against a value drawn from a uniform distribution and if the pest value is greater the agent is killed. Note that as we have used the herbivory user input as the on off switch if adult mortality is switched on so is seedling and optionally sapling mortality.
+
 ## Questions
 
 - How realistic is it to empty the regeneration bank (seedlings and saplings) when a tree grows in a gap?

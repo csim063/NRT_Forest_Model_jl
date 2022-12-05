@@ -436,6 +436,10 @@ module demog_funcs
     suppression 
     - `grass::Bool`: Boolean indicating whether grass is present in the model or not
     - `grass_invasion_prob::Float64`: Probability of grass invading a patch
+    - `pests::Bool`: Boolean indicating whether pests are present in the model or not
+    - `pest_mortality::Float64`: Probability of mortality due to pests (this is the mean in a
+        normal distribution)
+    - `pest_var::Float64`: Variance of the normal distribution used to calculate the probability
     """
     function death(
         agent,
@@ -455,6 +459,9 @@ module demog_funcs
         supp_mortality::Vector{Float64},
         grass::Bool,
         grass_invasion_prob::Float64,
+        pests::Bool,
+        pest_mortality::Float64,
+        pest_var::Float64
     )
         ## Define a mortality weighting
         mort_w = 1
@@ -515,6 +522,27 @@ module demog_funcs
                 cell,
                 )
             return
+
+        #% MORTALITY DUE TO PESTS----------------------------------#
+        elseif (pests == true)
+            pest_induced_mortality = rand(Normal(pest_mortality, pest_var))
+            if rand(Uniform(0.0, 1.0)) < pest_induced_mortality
+                if gap_maker == 1
+                    expand[cell] = true
+                end
+
+                ## Record dying tree height as a cell list
+                previous_height[cell] = a_height
+
+                set_get_functions.kill_tree(
+                    id,
+                    model,
+                    grass,
+                    grass_invasion_prob,
+                    cell,
+                    )
+                return
+            end
         end
     end
 

@@ -1,9 +1,9 @@
-species	colour_list	growth_form	max_hgt	max_dbh	max_age	g_jabowa	shade_tolerance	repro_height	repro_age	seed_prod	ldd_dispersal_dist	ldd_dispersal_frac	gap_maker	regen_height	supp_tolerance	supp_mortality	herbivory	edge_response	seedling_survival	sapling_survival	seedling_transition	seedling_inhibition	external_species	susceptible_soil_disease	susceptible_rust
-1	15	1	35	1.2	450	0.68	0.25	5.6	20	10	30	0.24	1	35	0.35	0.025	0.8	0.1	0.5	0.7	0.04	0	0.005	1	0
-2	45	1	15	0.5	100	1.37	0.4	4.1	10	10	30	0.12	0	35	0.5	0.125	0.5	0.5	0.5	0.7	0.07	0	0.02	0	0
-3	75	1	35	1.2	450	0.68	0.25	5.6	20	10	30	0.35	1	35	0.35	0.025	0.5	0.1	0.5	0.7	0.04	0	0.005	0	0
-4	105	1	6	0.3	60	1.03	0.4	3.4	10	10	30	0.06	0	35	0.8	0.125	0.5	0.3	0.6	0.7	0.1	0	0.02	0	0
-5	135	1	12	0.6	60	1.9	0.55	3.8	10	10	30	0.12	0	35	0.5	0.125	0.8	1	0.6	0.8	0.07	0	0.02	0	0
-6	25	1	35	2	800	0.38	0.35	5.6	20	10	30	0.6	1	35	0.4	0.1	0.1	0.1	0.4	0.6	0.03	0	0.005	0	0
-7	61	2	10	0.45	250	0.364	0.25	2	2	10	30	0.1	0	35	0.35	0.025	0.1	0.1	0.5	0.7	0.04	0	0.02	0	0
-8	86	1	15	0.9	150	0.944	0.1	4.1	10	10	30	0.15	1	35	0.8	0.125	0.1	1	0.5	0.7	0.04	0	0.05	0	1
+species	colour_list	growth_form	max_hgt	max_dbh	max_age	g_jabowa	shade_tolerance	repro_height	repro_age	seed_prod	ldd_dispersal_dist	ldd_dispersal_frac	gap_maker	regen_height	supp_tolerance	supp_mortality	herbivory	edge_response	seedling_survival	sapling_survival	seedling_transition	seedling_inhibition	external_species	susceptible_soil_disease	susceptible_rust	pest_mortality
+1	15	1	35	1.2	450	0.68	0.25	5.6	20	10	30	0.24	1	35	0.35	0.025	0.8	0.1	0.5	0.7	0.04	0	0.005	1	0	0.0025
+2	45	1	15	0.5	100	1.37	0.4	4.1	10	10	30	0.12	0	35	0.5	0.125	0.5	0.5	0.5	0.7	0.07	0	0.02	0	0	0.0125
+3	75	1	35	1.2	450	0.68	0.25	5.6	20	10	30	0.35	1	35	0.35	0.025	0.5	0.1	0.5	0.7	0.04	0	0.005	0	0	0.0025
+4	105	1	6	0.3	60	1.03	0.4	3.4	10	10	30	0.06	0	35	0.8	0.125	0.5	0.3	0.6	0.7	0.1	0	0.02	0	0	0.0125
+5	135	1	12	0.6	60	1.9	0.55	3.8	10	10	30	0.12	0	35	0.5	0.125	0.8	1	0.6	0.8	0.07	0	0.02	0	0	0.0125
+6	25	1	35	2	800	0.38	0.35	5.6	20	10	30	0.6	1	35	0.4	0.1	0.1	0.1	0.4	0.6	0.03	0	0.005	0	0	0.01
+7	61	2	10	0.45	250	0.364	0.25	2	2	10	30	0.1	0	35	0.35	0.025	0.1	0.1	0.5	0.7	0.04	0	0.02	0	0	0.0025
+8	86	1	15	0.9	150	0.944	0.1	4.1	10	10	30	0.15	1	35	0.8	0.125	0.1	1	0.5	0.7	0.04	0	0.05	0	1	0.0125

@@ -80,6 +80,8 @@ module Setup
     - `ext_dispersal_scenario::String`: Whether to assign external seeds to each species equally
         ("equal") or by abundance ("abundance")
     - `herbivory::Bool`: Whether to include for herbivory effects or not
+    - `herbivore_variablility::Float64`: The amount of variability in herbivory rates between years
+        (this is a standard deviation value used when drawing from a normal distribution)
     - `saplings_eaten::Bool`: Whether saplings are impacted by herbivory or not
     - `macro_litter_effect::Float64`: Probability of a sapling being killed by a macro-litter fall
     - `ddm::Bool`: Whether to include density dependent mortality or not
@@ -128,6 +130,7 @@ module Setup
         external_rain::Bool = false,
         ext_dispersal_scenario::String = "equal",
         herbivory::Bool = false,
+        herbivore_variability::Float64 = 0.05,
         saplings_eaten::Bool = false,
         macro_litter_effect::Float64 = 0.10,
         ddm::Bool = false,
@@ -208,6 +211,7 @@ module Setup
         external_species = demography_df.external_species
 
         herbivory_amount = demography_df.herbivory
+        adult_pest_herbivory = demography_df.pest_mortality
 
         base_mortality = (4 ./ max_ages)
         supp_tolerance = demography_df.supp_tolerance
@@ -273,6 +277,7 @@ module Setup
             :regen_heights => regen_heights::Vector{Int64},
             :external_species => external_species::Vector{Float64},
             :herbivory_amount => herbivory_amount::Vector{Float64},
+            :adult_pest_herbivory => adult_pest_herbivory::Vector{Float64},
             :supp_tolerance => supp_tolerance::Vector{Float64},
             :supp_mortality => supp_mortality::Vector{Float64},
             :gap_maker => gap_maker::Vector{Int64},
@@ -291,6 +296,7 @@ module Setup
             :external_rain => external_rain::Bool,
             :ext_dispersal_scenario => ext_dispersal_scenario::String,
             :herbivory => herbivory::Bool,
+            :herbivore_variability => herbivore_variability::Float64,
             :saplings_eaten => saplings_eaten::Bool,
             :macro_litter_effect => macro_litter_effect::Float64,
             :ddm => ddm::Bool,
