@@ -75,6 +75,7 @@ module go
         max_dbh::Float64 = max_dbhs[spec_num]
         max_height::Int64 = max_heights[spec_num]
         gap_maker::Int64 = model.gap_maker[spec_num]
+        pest_herbivory::Float64 = model.adult_pest_herbivory[spec_num]
 
         #% GROW-----------------------------------------------------#
         #*Have each tree grow, i.e. increase their age, height and 
@@ -144,7 +145,7 @@ module go
         end
 
         #% MORTAILTY------------------------------------------------#
-        ## Herbivory
+        ## Herbivory for seedlings and saplings
         if model.herbivory == true
             demog_funcs.herbivore_effect(agent, model)
         end
@@ -180,6 +181,9 @@ module go
                                 model.supp_mortality,
                                 grass,
                                 grass_invasion_prob,
+                                model.herbivory,
+                                pest_herbivory,
+                                model.herbivore_variability
                                 )
         end
 
