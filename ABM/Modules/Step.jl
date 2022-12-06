@@ -145,7 +145,7 @@ module go
         end
 
         #% MORTAILTY------------------------------------------------#
-        ## Herbivory
+        ## Herbivory for seedlings and saplings
         if model.herbivory == true
             demog_funcs.herbivore_effect(agent, model)
         end
