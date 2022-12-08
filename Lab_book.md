@@ -33,6 +33,8 @@
 
 - Added an adult mortality rate resulting from (pest) herbivory. The adult mortality is calculated using a species specific mean (defined in demography.txt) and user defined variabilty to draw a value from a normal distribution. This value is then tested against a value drawn from a uniform distribution and if the pest value is greater the agent is killed. Note that as we have used the herbivory user input as the on off switch if adult mortality is switched on so is seedling and optionally sapling mortality.
 
+- Added a weather flag that when switched on draws a value from a normal distribution with a mean of 0 and a standard deviation defined by the user. This value is added to baseline mortality, so positive values will result in higher mortality rates and lower values will result in decreased mortaility. Currently, seedling and sapling mortality is increased by exactly the same amount as adult mortaility, while it is likely desirable to have the direction and relative intensity of the changes to be correlated it may be that these changes are too small for seedling and saplings and may need some alterations.
+
 ## Questions
 
 - How realistic is it to empty the regeneration bank (seedlings and saplings) when a tree grows in a gap?

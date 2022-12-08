@@ -9,6 +9,7 @@ module Setup
     using Random
     using StatsBase
     using DataFrames
+    using Distributions
 
     #* CUSTOM MODULES
     include("Helper_functions.jl")
@@ -113,6 +114,7 @@ module Setup
     - `rust_mortality_prob::Float64`: Probability of a tree dying from rust in any given tick
     - `rust_min_symptomatic_age::Int64`: Age (number of ticks) after which rust can cause
         mortality in a tree
+    - `weather::Bool`: Whether to include weather effects or not
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -152,6 +154,8 @@ module Setup
         rust_symptoms_dev_prob::Float64 = 0.1,
         rust_mortality_prob::Float64 = 0.1,
         rust_min_symptomatic_age::Int64 = 2,
+        weather::Bool = false,
+        weather_variability::Float64 = 0.01,
         )
 
 
@@ -226,6 +230,12 @@ module Setup
         phytothera_target = demography_df.susceptible_soil_disease::Vector{Int64}
         rust_target = demography_df.susceptible_rust::Vector{Int64}
 
+        #* Define initial steps weather adjustment on mortality
+        weather_adjustment = 0.0
+        if weather
+            weather_adjustment = rand(Normal(0, weather_variability))
+        end
+
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
         properties = Dict(
             #% PATCH VARIABLES----------------------------#
@@ -286,6 +296,7 @@ module Setup
             :max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
             :rust_target => rust_target::Vector{Int64},
+            :weather_adjustment => weather_adjustment::Float64,
             #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,
@@ -318,6 +329,8 @@ module Setup
             :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
             :rust_mortality_prob => rust_mortality_prob::Float64,
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
+            :weather => weather::Bool,
+            :weather_variability => weather_variability::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

@@ -183,7 +183,8 @@ module go
                                 grass_invasion_prob,
                                 model.herbivory,
                                 pest_herbivory,
-                                model.herbivore_variability
+                                model.herbivore_variability,
+                                model.weather_adjustment
                                 )
         end
 
@@ -297,6 +298,9 @@ module go
                         grass::Bool = model.grass,
                         grass_invasion_prob::Float64 = model.grass_invasion_prob,
                         grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
+                        weather::Bool = model.weather,
+                        weather_variability::Float64 = model.weather_variability,
+                        weather_adjustment::Float64 = model.weather_adjustment,
                         )
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
         grid = collect(positions(model))
@@ -423,6 +427,10 @@ module go
         end
 
         #% SEEDLING AND SAPLING MORTAILTY AND GROWTH----------------#
+        if weather
+            seedling_mortality .+= weather_adjustment
+            sapling_mortality .+= weather_adjustment
+        end
         Threads.@threads for i in eachindex(grid)
             demog_funcs.regenerate_patch_bank(i,
                                             seedlings, 
@@ -439,6 +447,11 @@ module go
         model.max_density = maximum(sapling_density)
         set_get_functions.update_abundances(model, n_species)
 
+        #% UPDATE END OF TICK VARIABLES-----------------------------#
+        #* Redraw weathers impact on mortality if it is included in the model
+        if weather
+            model.weather_adjustment = rand(Normal(0, weather_variability))
+        end
         model.tick += 1
     end
 end
