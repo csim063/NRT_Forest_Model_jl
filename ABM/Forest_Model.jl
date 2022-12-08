@@ -80,6 +80,8 @@ model = Setup.forest_model(forest_area = 4,
                         rust_symptoms_dev_prob = 0.1,
                         rust_mortality_prob = 0.1,
                         rust_min_symptomatic_age = 5,
+                        weather = false, # Whether to include weather in the model
+                        weather_variability = 0.01,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

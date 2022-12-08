@@ -461,7 +461,8 @@ module demog_funcs
         grass_invasion_prob::Float64,
         pests::Bool,
         pest_mortality::Float64,
-        pest_var::Float64
+        pest_var::Float64,
+        weather_adjustments::Float64
     )
         ## Define a mortality weighting
         mort_w = 1
@@ -480,9 +481,11 @@ module demog_funcs
         end
 
         #% BASELINE MORTALITY---------------------------------------#  
+        baseline_mortality = base_mortality[species_ID] + weather_adjustments
+
         #* Approximates the standard gap mortality model 
         #* (see Keane et al. 2001)
-        if rand(Uniform(0.0, 1.0)) < (base_mortality[species_ID] .* mort_w)
+        if rand(Uniform(0.0, 1.0)) < (baseline_mortality .* mort_w)
             if gap_maker == 1
                 expand[cell] = true
             end
