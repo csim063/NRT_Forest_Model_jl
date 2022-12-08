@@ -5,6 +5,10 @@ implemented in the model.
 
 module disease_functions
     using Agents
+    using StatsBase
+
+    #* CUSTOM MODULES
+    include("Helper_functions.jl")
 
     #//-------------------------------------------------------------------------------------------#
     #% PHYTOTHERA SPREAD
@@ -43,10 +47,16 @@ module disease_functions
                               phyto_local_prob::Float64,
                               infectious_radius::Int64,
                               transmission_age::Int64,
-                              pos::Tuple{Int64, Int64},)
+                              pos::Tuple{Int64, Int64},
+                              edge_effects::Bool)
         #* Check whether agent gets infected by global chance
         #TODO add an increased chance if the agent is an edge patch
-        if rand() < global_infection_prob
+        global_prob = global_infection_prob
+        if edge_effects == true && length(agent.previous_growth) > 0
+            global_prob += (1 - mean(agent.previous_growth))
+        end
+
+        if rand() < global_prob
             agent.phytothera_infected::Bool = true
             
         #* If not globally infected check whether agent gets infected by local neighbours 
@@ -159,7 +169,6 @@ module disease_functions
     function rust_spread(agent,
                          rust_infection_prob::Float64)
         #* Check whether agent gets infected by global chance
-        #TODO add an increased chance if the agent is an edge patch
         if rand() < rust_infection_prob
             agent.rust_infected::Bool = true
         end

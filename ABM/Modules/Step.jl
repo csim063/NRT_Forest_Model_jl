@@ -202,6 +202,7 @@ module go
                                                     phyto_infectious_radius::Int64,
                                                     phyto_transmission_age::Int64,
                                                     agent_pos::Tuple{Int64, Int64},
+                                                    edge_effects::Bool,
                                                     )
             end
 
