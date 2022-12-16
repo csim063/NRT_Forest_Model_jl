@@ -76,6 +76,7 @@ module go
         max_height::Int64 = max_heights[spec_num]
         gap_maker::Int64 = model.gap_maker[spec_num]
         pest_herbivory::Float64 = model.adult_pest_herbivory[spec_num]
+        generic_gradient::Float64 = model.nhb_gg[cell]
 
         #% GROW-----------------------------------------------------#
         #*Have each tree grow, i.e. increase their age, height and 
@@ -93,7 +94,8 @@ module go
                         b2_jabowa,
                         b3_jabowa,
                         max_dbh,
-                        max_height)
+                        max_height,
+                        generic_gradient,)
 
         #% DISPERSAL------------------------------------------------#
         #* This is only dispersal of seeds local to the habitat
@@ -351,7 +353,6 @@ module go
 
         Threads.@threads for i in eachindex(grid)
             #% NEIGHBOURHOOD FUNCTIONS------------------------------#
-            ##TODO DOES THIS NEED TO BE DONE FOR EVERY PATCH?
             #* Use the neighbours sets for all cells to determine
             #* there mean shade height and light environment.
             model.nhb_shade_height[i] = set_get_functions.get_nhb_shade_height(i, 
@@ -365,7 +366,7 @@ module go
         end
 
         #% GROW NEW TREES IN GAPS-----------------------------------#
-        #TODO: This is a bit of a mess, needs to be tidied up and made into a function
+        #TODO: This could be made into a function
         #* Define pre-loop variables
         empty_patches = Random.shuffle!(collect(empty_positions(model))) 
         nhb_light = model.nhb_light
@@ -443,10 +444,6 @@ module go
             seedling_density[i] = sum(seedlings[i])
             sapling_density[i] = sum(saplings[i])
         end
-
-        #% REPORTERS------------------------------------------------#
-        model.max_density = maximum(sapling_density)
-        set_get_functions.update_abundances(model, n_species)
 
         #% UPDATE END OF TICK VARIABLES-----------------------------#
         #* Redraw weathers impact on mortality if it is included in the model

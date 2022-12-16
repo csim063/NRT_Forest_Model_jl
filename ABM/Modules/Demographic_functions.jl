@@ -67,17 +67,31 @@ module demog_funcs
         b2_jabowas::Float64,
         b3_jabowas::Float64,
         max_dbhs::Float64,
-        max_heights::Int64
+        max_heights::Int64,
+        generic_gradient::Float64
     )
         agent.age += 1
 
         #% CALCULATE COMPETITIVE PENALTY FROM NEIGHBOURS------------#
         competitive_penalty = 1
+        #* Shade competive penalty applied to trees
         if shade_height ≥ height
-            comp_val = Float64(abs(Complex(height ./ shade_height) .^ 0.5))
-            competitive_penalty = min(1, (comp_multiplier .* comp_val))
+            shad_comp_val = Float64(abs(Complex(height ./ shade_height) .^ 0.5))
+            competitive_penalty = min(1, (comp_multiplier .* shad_comp_val))
         end
 
+        #TODO: THIS IS A GENERIC GRADIENT WHICH SHOULD BE REPLACED BY REALISTIC GRADIENTS
+        #* This generic gradient is based on values in each cell drawn from a random uniform
+        #* distribution between 0 and 1. This value is used to in association with an exponential
+        #* distribution to calculate the probability density for that gradient value on that 
+        #* distribution. This probability density is scaled between 0 and 1 and then subtracted
+        #* from 1 to ensure cells with high values (i.e. higher resources) have higher competitive
+        #* values remembering lower values result in lower growth.
+        d = truncated(Exponential(), lower = 0.0, upper = 1.0)
+        g_comp_val = 1 - (pdf(d, generic_gradient) / pdf(d, 0.0))
+
+        #* Select the resource which is most limiting
+        competitive_penalty = min(competitive_penalty, (comp_multiplier .* g_comp_val))
         #% CALCULATE EDGE PENALTY-----------------------------------#
         edge_penalty = 1
         if edge_effects == true
@@ -87,6 +101,7 @@ module demog_funcs
         #% CALCULATE OVERALL GROWTH PENALTY-------------------------#
         #* Store growth penalty history for use
         #* later in suppression mortality
+        #! Note 1 is no change in growth and 0 is no growth
         growth_reduction = competitive_penalty * edge_penalty
         prepend!(agent.previous_growth, growth_reduction)
 

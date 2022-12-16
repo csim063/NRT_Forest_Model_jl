@@ -250,6 +250,7 @@ module Setup
             :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
             :nhb_shade_height => zeros(Float64, prod((dims, dims))),
             :nhb_light => zeros(Float64, prod((dims, dims))),
+            :nhb_gg => rand(dims, dims), #This is just to create a generic gradient with random values in each cell
             :disturbed => falses(prod((dims, dims))),
             :expand => falses(prod((dims, dims))),
             :grass_flag => falses(prod((dims, dims))),
@@ -293,7 +294,7 @@ module Setup
             :gap_maker => gap_maker::Vector{Int64},
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
-            :max_density => sap_density::Int64,
+            #:max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
             :rust_target => rust_target::Vector{Int64},
             :weather_adjustment => weather_adjustment::Float64,
@@ -331,6 +332,7 @@ module Setup
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
             :weather => weather::Bool,
             :weather_variability => weather_variability::Float64,
+            :gg_cutoff => gg_cutoff::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

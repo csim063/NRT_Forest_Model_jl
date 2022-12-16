@@ -35,6 +35,8 @@
 
 - Added a weather flag that when switched on draws a value from a normal distribution with a mean of 0 and a standard deviation defined by the user. This value is added to baseline mortality, so positive values will result in higher mortality rates and lower values will result in decreased mortaility. Currently, seedling and sapling mortality is increased by exactly the same amount as adult mortaility, while it is likely desirable to have the direction and relative intensity of the changes to be correlated it may be that these changes are too small for seedling and saplings and may need some alterations.
 
+- Added a generic gradient based on values in each cell drawn from a random uniform distribution between 0 and 1. This value is used to in association with an exponential distribution to calculate the probability density for that gradient value on that distribution. This probability density is scaled between 0 and 1 and then subtracted from 1 to ensure cells with high values (i.e. higher resources) have higher competitive values remembering lower values result in lower growth
+
 ## Questions
 
 - How realistic is it to empty the regeneration bank (seedlings and saplings) when a tree grows in a gap?
@@ -46,3 +48,5 @@
 - Add impact of edge effect to disease spread. Should be easy enough to just add an extra chance of global infection to edge trees of target species
 - Add additional disease impacts resulting from becoming symptomatic.
 - Could possibly improve performance by making different agents if there is or isn't disease present as if there is no disease agents require far less parameters
+- Currently phytophera is impacted by the growth reduction parameter if edge effects are on. This is to increase the spread for edge cells but as growth reduction is a combination of edge impacts and species competition it may need to be untied to simply be edge effects.
+- Add some impact on seedling regeration from other gradients, currently only shade height is taken into account. Implementing this could be as simple as adding a second condition to the if statement in `assign_seedling()` and `ldd_within()`, but some thought will need to be required to ensure that this cutoff is random not static or else some cells may never sprout seeds (this may be desired)
