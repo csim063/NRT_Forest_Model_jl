@@ -50,7 +50,8 @@ module disease_functions
                               pos::Tuple{Int64, Int64},
                               edge_effects::Bool)
         #* Check whether agent gets infected by global chance
-        #TODO add an increased chance if the agent is an edge patch
+        #* Global chance is increased for trees in the edge of the model grid if edge effects are on
+        #TODO may want to untie this from competitive growth reduction to pure edge effects
         global_prob = global_infection_prob
         if edge_effects == true && length(agent.previous_growth) > 0
             global_prob += (1 - mean(agent.previous_growth))

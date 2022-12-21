@@ -35,14 +35,20 @@
 
 - Added a weather flag that when switched on draws a value from a normal distribution with a mean of 0 and a standard deviation defined by the user. This value is added to baseline mortality, so positive values will result in higher mortality rates and lower values will result in decreased mortaility. Currently, seedling and sapling mortality is increased by exactly the same amount as adult mortaility, while it is likely desirable to have the direction and relative intensity of the changes to be correlated it may be that these changes are too small for seedling and saplings and may need some alterations.
 
+- Added a generic gradient based on values in each cell drawn from a random uniform distribution between 0 and 1. This value is used to in association with an exponential distribution to calculate the probability density for that gradient value on that distribution. This probability density is scaled between 0 and 1 and then subtracted from 1 to ensure cells with high values (i.e. higher resources) have higher competitive values remembering lower values result in lower growth (this all occurs in `grow()`). The generic gradient also impacts `capture_gap()` where it is used as the mean of a truncated normal distribution used to draw a weighting value for each species each step. This weighting value is combined with the shade weighting value with the mean used as the overall weight to be used when selecting the species in the lottery function.
+
 ## Questions
 
 - How realistic is it to empty the regeneration bank (seedlings and saplings) when a tree grows in a gap?
 - Should we implement a species specific phytothera spread rate rather than constants.
 - Need to assess the radius of surrounding trees assumed to be able to infect trees with phytothera, current it is radius 2 as literature mentioned short range movement
+- Not sure I fully understand the capture gap function in terms of weighting. It seems like the weights increase the relative value of the saplings for the different species, but weights are smaller for more shade tolerant species which means less shade tolerant species would be selected is this correct?
 
 ## Possible to do items
 
 - Add impact of edge effect to disease spread. Should be easy enough to just add an extra chance of global infection to edge trees of target species
 - Add additional disease impacts resulting from becoming symptomatic.
 - Could possibly improve performance by making different agents if there is or isn't disease present as if there is no disease agents require far less parameters
+- Currently phytophera is impacted by the growth reduction parameter if edge effects are on. This is to increase the spread for edge cells but as growth reduction is a combination of edge impacts and species competition it may need to be untied to simply be edge effects.
+- Add some impact on seedling regeration from other gradients, currently only shade height is taken into account. Implementing this could be as simple as adding a second condition to the if statement in `assign_seedling()` and `ldd_within()`, but some thought will need to be required to ensure that this cutoff is random not static or else some cells may never sprout seeds (this may be desired)
+- It may be worth having weather also linked to other factors such as growth with "good" weather causing increased growth and vice versa.
