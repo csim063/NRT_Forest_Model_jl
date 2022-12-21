@@ -631,6 +631,7 @@ module demog_funcs
     - `nhb_light::Vector{Float64}`: Light environment for all cells in model grid. For more details
     regarding light environments see Dislich et *al* (2009)
     - `shade_tolerance::Vector{Float64}`: Species specific shade tolerances
+    - `nhb_gg::Matrix{Float64}`: Generic environmental gradient value of cells.
     - `growth_forms::Vector{Int64}`: Growth type of agent, 1 = trees; 2 = tree ferns.
     - `b2_jabowas::Vector{Float64}`: List of species-specific allometric constant defined by Botkin 
     et *al* (1972) defined as `2 * (max_height - 1.37) / max_dbh` where 1.37 is the smallest adult 
@@ -643,6 +644,8 @@ module demog_funcs
     - `tick::Int64`: Current model timestep (i.e. tick).
     - `n_changes::Vector{Int64}`: Total number of species ID changes that have occured in a cell for
     all cells in the model grid
+    - `new_agents_list::Vector{Any}`: List of all new agents that have been created in the current
+    model tick.
     """
     function capture_gap(
         cell_ID::Vector{Int64},
@@ -650,13 +653,14 @@ module demog_funcs
         saplings::Vector{Vector{Int64}},
         nhb_light::Vector{Float64},
         shade_tolerance::Vector{Float64},
+        nhb_gg::Matrix{Float64},
         growth_forms::Vector{Int64},
         b2_jabowas::Vector{Float64},
         b3_jabowas::Vector{Float64},
         last_change_tick::Vector{Int64},
         tick::Int64,
         n_changes::Vector{Int64},
-        new_agents_list
+        new_agents_list::Vector{Any}
     )
         seedlings = seedlings[cell_ID]
         saplings = saplings[cell_ID]
@@ -665,8 +669,15 @@ module demog_funcs
         #? 0.25 is probability of one sapling becoming an adult
         if sum(saplings[1]) >= 1 && rand(Uniform(0, 1)) < (1.0 - (0.25 ^ sum(saplings[1])))
             #* Create down weightings due to light environment and shade tolerance
-            weights = floor.(Int, (abs.(nhb_light[cell_ID] .- 
+            s_weights = floor.(Int, (abs.(nhb_light[cell_ID] .- 
                                         shade_tolerance)) * 100)
+
+            #*Draw from normal distribution with mean of generic gradient
+            gg_weights = floor.(Int, (rand(truncated(Normal(nhb_gg[cell_ID][1]), 0, 1), 
+                                    length(seedlings[1])) .* 100))
+            
+            #*Have weights equal the mean of shade and generic gradient
+            weights = floor.(Int, mean([s_weights, gg_weights]))
 
             regenbank_wgt = saplings[1] .* weights
 

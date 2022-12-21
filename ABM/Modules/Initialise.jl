@@ -332,7 +332,6 @@ module Setup
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
             :weather => weather::Bool,
             :weather_variability => weather_variability::Float64,
-            :gg_cutoff => gg_cutoff::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###

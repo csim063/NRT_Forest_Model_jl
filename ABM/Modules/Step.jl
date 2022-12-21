@@ -370,6 +370,7 @@ module go
         #* Define pre-loop variables
         empty_patches = Random.shuffle!(collect(empty_positions(model))) 
         nhb_light = model.nhb_light
+        nhb_gg = model.nhb_gg
         new_agents_list = Any[]
 
         #* Loop through all empty patches and grow trees in gaps
@@ -378,12 +379,14 @@ module go
             cell_ID = findfirst(isequal([patch::Tuple{Int64, Int64}]), 
                                         pcor::Vector{Vector{Tuple{Int64, Int64}}}
                                         )
+            
 
             demog_funcs.capture_gap([cell_ID::Int64], 
                                     seedlings::Vector{Vector{Int64}},
                                     saplings::Vector{Vector{Int64}},
                                     nhb_light::Vector{Float64},
                                     shade_tolerance::Vector{Float64},
+                                    nhb_gg::Matrix{Float64},
                                     growth_forms::Vector{Int64},
                                     b2_jabowas::Vector{Float64},
                                     b3_jabowas::Vector{Float64},
