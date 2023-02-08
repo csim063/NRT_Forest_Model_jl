@@ -58,6 +58,7 @@ model = Setup.forest_model(forest_area = 4,
                         external_rain = false,
                         ext_dispersal_scenario = "equal",
                         herbivory = false,
+                        herbivore_variability = 0.01,
                         saplings_eaten = false,
                         macro_litter_effect = 0.10,
                         ddm = false,
@@ -79,6 +80,8 @@ model = Setup.forest_model(forest_area = 4,
                         rust_symptoms_dev_prob = 0.1,
                         rust_mortality_prob = 0.1,
                         rust_min_symptomatic_age = 5,
+                        weather = false, # Whether to include weather in the model
+                        weather_variability = 0.01,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

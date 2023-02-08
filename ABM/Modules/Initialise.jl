@@ -9,6 +9,7 @@ module Setup
     using Random
     using StatsBase
     using DataFrames
+    using Distributions
 
     #* CUSTOM MODULES
     include("Helper_functions.jl")
@@ -80,6 +81,8 @@ module Setup
     - `ext_dispersal_scenario::String`: Whether to assign external seeds to each species equally
         ("equal") or by abundance ("abundance")
     - `herbivory::Bool`: Whether to include for herbivory effects or not
+    - `herbivore_variablility::Float64`: The amount of variability in herbivory rates between years
+        (this is a standard deviation value used when drawing from a normal distribution)
     - `saplings_eaten::Bool`: Whether saplings are impacted by herbivory or not
     - `macro_litter_effect::Float64`: Probability of a sapling being killed by a macro-litter fall
     - `ddm::Bool`: Whether to include density dependent mortality or not
@@ -111,6 +114,7 @@ module Setup
     - `rust_mortality_prob::Float64`: Probability of a tree dying from rust in any given tick
     - `rust_min_symptomatic_age::Int64`: Age (number of ticks) after which rust can cause
         mortality in a tree
+    - `weather::Bool`: Whether to include weather effects or not
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -128,6 +132,7 @@ module Setup
         external_rain::Bool = false,
         ext_dispersal_scenario::String = "equal",
         herbivory::Bool = false,
+        herbivore_variability::Float64 = 0.05,
         saplings_eaten::Bool = false,
         macro_litter_effect::Float64 = 0.10,
         ddm::Bool = false,
@@ -149,6 +154,8 @@ module Setup
         rust_symptoms_dev_prob::Float64 = 0.1,
         rust_mortality_prob::Float64 = 0.1,
         rust_min_symptomatic_age::Int64 = 2,
+        weather::Bool = false,
+        weather_variability::Float64 = 0.01,
         )
 
 
@@ -208,6 +215,7 @@ module Setup
         external_species = demography_df.external_species
 
         herbivory_amount = demography_df.herbivory
+        adult_pest_herbivory = demography_df.pest_mortality
 
         base_mortality = (4 ./ max_ages)
         supp_tolerance = demography_df.supp_tolerance
@@ -221,6 +229,12 @@ module Setup
         #* Is the species able to get diseases?
         phytothera_target = demography_df.susceptible_soil_disease::Vector{Int64}
         rust_target = demography_df.susceptible_rust::Vector{Int64}
+
+        #* Define initial steps weather adjustment on mortality
+        weather_adjustment = 0.0
+        if weather
+            weather_adjustment = rand(Normal(0, weather_variability))
+        end
 
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
         properties = Dict(
@@ -236,6 +250,7 @@ module Setup
             :close_nhbs_count => zeros(Int, prod((dims, dims))), #rename of netlogo models nhbs which is a count of the nearest layer of neighbours
             :nhb_shade_height => zeros(Float64, prod((dims, dims))),
             :nhb_light => zeros(Float64, prod((dims, dims))),
+            :nhb_gg => rand(dims, dims), #This is just to create a generic gradient with random values in each cell
             :disturbed => falses(prod((dims, dims))),
             :expand => falses(prod((dims, dims))),
             :grass_flag => falses(prod((dims, dims))),
@@ -273,14 +288,16 @@ module Setup
             :regen_heights => regen_heights::Vector{Int64},
             :external_species => external_species::Vector{Float64},
             :herbivory_amount => herbivory_amount::Vector{Float64},
+            :adult_pest_herbivory => adult_pest_herbivory::Vector{Float64},
             :supp_tolerance => supp_tolerance::Vector{Float64},
             :supp_mortality => supp_mortality::Vector{Float64},
             :gap_maker => gap_maker::Vector{Int64},
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
-            :max_density => sap_density::Int64,
+            #:max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
             :rust_target => rust_target::Vector{Int64},
+            :weather_adjustment => weather_adjustment::Float64,
             #% USER INPUTS--------------------------------#
             :cell_grain => cell_grain::Int64,
             :disturbance_freq => disturb_freq::Float64,
@@ -291,6 +308,7 @@ module Setup
             :external_rain => external_rain::Bool,
             :ext_dispersal_scenario => ext_dispersal_scenario::String,
             :herbivory => herbivory::Bool,
+            :herbivore_variability => herbivore_variability::Float64,
             :saplings_eaten => saplings_eaten::Bool,
             :macro_litter_effect => macro_litter_effect::Float64,
             :ddm => ddm::Bool,
@@ -312,6 +330,8 @@ module Setup
             :rust_symptoms_dev_prob => rust_symptoms_dev_prob::Float64,
             :rust_mortality_prob => rust_mortality_prob::Float64,
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
+            :weather => weather::Bool,
+            :weather_variability => weather_variability::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
