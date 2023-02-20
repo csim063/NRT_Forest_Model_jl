@@ -24,10 +24,10 @@
 ## Additions
 
 - Added phytothera spread and impacts. The disease model is implemented as an SEI (Susceptible, Exposed, Infected) model. Trees can be defined as susceptible/target species in the demography input file
-  Infection spreads (i.e. trees are exposed) in two ways, a global probability of a target tree getting exposed and a local probability that a target tree will get exposed by an infected neighbour in a predefined infectious radius. The more infected neighbour trees the higher the probability (or rather the more tests are done against that probability) a the target tree gets infected. Neighbours may only infect trees if they have been infected longer than a user defined time period to mimic the time taken for trees to become infectious after exposure. Infected trees may become symptomatic after a determined minimum period of time after infection and symptomatic trees may die with a given probability.
+Infection spreads (i.e. trees are exposed) in two ways, a global probability of a target tree getting exposed and a local probability that a target tree will get exposed by an infected neighbour in a predefined infectious radius. The more infected neighbour trees the higher the probability (or rather the more tests are done against that probability) a the target tree gets infected. Neighbours may only infect trees if they have been infected longer than a user defined time period to mimic the time taken for trees to become infectious after exposure. Infected trees may become symptomatic after a determined minimum period of time after infection and symptomatic trees may die with a given probability.
 
 - Added grass as an optional factor. If grass is enabled there is a defined probablilty that grass may invade a patch after a tree dies and a gap establishes. If a patch has been invaded by grass any seeds
-  landing there only have a probability (rather than a certainty) of establishing into a seedling during dispersal phases. Each dispersal phase and thus each seed entering patch in a step is tested independently.
+landing there only have a probability (rather than a certainty) of establishing into a seedling during dispersal phases. Each dispersal phase and thus each seed entering patch in a step is tested independently.
 
 - Removed previous species for each patch as it is not used and can be accessed directly by data export if needed for analysis.
 
