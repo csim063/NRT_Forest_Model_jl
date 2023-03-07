@@ -302,7 +302,6 @@ module go
                         grass_invasion_prob::Float64 = model.grass_invasion_prob,
                         grass_colonisation_prob::Float64 = model.grass_colonisation_prob,
                         weather::Bool = model.weather,
-                        weather_variability::Float64 = model.weather_variability,
                         weather_adjustment::Float64 = model.weather_adjustment,
                         )
         #% DEFINE VARIABLES USED ACROSS PROCEDURES------------------#
@@ -435,6 +434,11 @@ module go
         if weather
             seedling_mortality .+= weather_adjustment
             sapling_mortality .+= weather_adjustment
+
+            seedling_mortality = max.(seedling_mortality, 0.0)
+            seedling_mortality = min.(seedling_mortality, 1.0)
+            sapling_mortality = max.(sapling_mortality, 0.0)
+            sapling_mortality = min.(sapling_mortality, 1.0)
         end
         Threads.@threads for i in eachindex(grid)
             demog_funcs.regenerate_patch_bank(i,
@@ -451,9 +455,28 @@ module go
         #% UPDATE END OF TICK VARIABLES-----------------------------#
         #* Redraw weathers impact on mortality if it is included in the model
         if weather
-            model.weather_adjustment = rand(Normal(0, weather_variability))
             model.ENSO_state = set_get_functions.get_ENSO(string(model.ENSO_state), 
                                                           model.ENSO_transitions)
+
+            #* If ENSO is not neutral, then set a non-zero weather adjustment
+            if model.ENSO_state != "N"
+                max_val = model.max_ENSO_impact/2
+                min_val = 0.0
+                #* If ENSO is strong draw from a distribution with higher min and max values
+                if model.ENSO_state == "LN" || model.ENSO_state == "EN"
+                    max_val = model.max_ENSO_impact
+                    min_val = model.max_ENSO_impact/2
+                end
+
+                model.weather_adjustment = rand(Uniform(min_val, max_val))
+
+                #! We assume La Nina is negative and El Nino is positive, meaning that 
+                #! La Nina will decrease mortality and El Nino will increase mortality
+                #! i.e La Nina good for trees, El Nino bad for trees.
+                if model.ENSO_state == "LN" || model.ENSO_state == "LNL"
+                    model.weather_adjustment = -model.weather_adjustment
+                end
+            end
         end
         model.tick += 1
     end
