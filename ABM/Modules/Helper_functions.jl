@@ -94,6 +94,7 @@ values from agent sets.
 module set_get_functions
     using Agents
     using StatsBase
+    using DataFrames
 
     #//-------------------------------------------------------------------------------------------#
     #% GET HEIGHTS OF NEIGHBOURING TREES
@@ -339,5 +340,50 @@ module set_get_functions
             model.grass_flag[cell] = true
         end
     end
-end
 
+    #//-------------------------------------------------------------------------------------------#
+    #% SELECT ENSO STATE
+    """
+    # Select El Nino or La Nina state
+    Function to select El Nino or La Nina state for the current year. This function uses a 
+        transition matrix (Data/ENSO_transition.csv) to select the state for the current year based 
+        on the state of the previous year and the probability of transition between states. The 
+        data for the transition matrix was obtained from NIWA 
+        (https://niwa.co.nz/climate/information-and-resources/elnino) and processed by Andre 
+        Bellve.
+    ## Arguments:
+    - `current_ENSO::String`: ENSO state for previous year
+    - `ENSO_transition`: Transition matrix for ENSO states
+    ## Return
+    - `String`: New ENSO state for current year
+    """
+    function get_ENSO(
+        current_ENSO::String,
+        ENSO_transition::DataFrame
+    )
+        #* Check that current ENSO state is valid
+        if !(current_ENSO in unique(ENSO_transition.state))
+            error("Invalid ENSO state")
+        end
+
+        #* Subset data frame to get transition probabilities for current ENSO state
+        transitions_current = ENSO_transition[ENSO_transition.state .== current_ENSO, :];
+
+        #* Select new ENSO state
+        transition_probs = Dict(zip(transitions_current.next_state, transitions_current.prob));
+        states, probs = zip(collect(transition_probs)...)
+        cum_weights = cumsum(probs)
+        rand_num = rand()
+
+        #* If rand_num is less than the cumulative probability of the first state, then the current
+        #* ENSO state is kept as the new state
+
+        if rand_num < cum_weights[1]
+            new_state = current_ENSO
+        else
+            new_state = states[findnext(cum_weights .> rand_num, true)]
+        end
+
+        return new_state
+    end
+end

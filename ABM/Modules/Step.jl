@@ -452,6 +452,8 @@ module go
         #* Redraw weathers impact on mortality if it is included in the model
         if weather
             model.weather_adjustment = rand(Normal(0, weather_variability))
+            model.ENSO_state = set_get_functions.get_ENSO(string(model.ENSO_state), 
+                                                          model.ENSO_transitions)
         end
         model.tick += 1
     end

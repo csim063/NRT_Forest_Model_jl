@@ -37,6 +37,7 @@ video_export_name = "NRT_Video"
 #% IMPORT SITE AND DEMOGRAPHIC DATAFRAMES
 demography_df = DataFrame(CSV.File("Data/demography.txt"));
 site_df = DataFrame(CSV.File("Data/forest.txt"));
+ENSO_df = DataFrame(CSV.File("Data/ENSO_transition.csv"));
 
 #//-----------------------------------------------------------------------------------------------#
 #% SETUP MODEL
@@ -51,6 +52,7 @@ model = Setup.forest_model(forest_area = 4,
                         max_shade_distance = 32,
                         site_df = site_df,
                         demography_df = demography_df,
+                        ENSO_df = ENSO_df,
                         disturb_freq = 0.000,
                         max_disturb_size = 0.40,
                         comp_multiplier = 1.60,
@@ -80,7 +82,7 @@ model = Setup.forest_model(forest_area = 4,
                         rust_symptoms_dev_prob = 0.1,
                         rust_mortality_prob = 0.1,
                         rust_min_symptomatic_age = 5,
-                        weather = false, # Whether to include weather in the model
+                        weather = true, # Whether to include weather in the model
                         weather_variability = 0.01,
                         );
 

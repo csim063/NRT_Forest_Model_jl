@@ -70,6 +70,7 @@ module Setup
     - `max_shade_distance::Int64`: Maximum distance over which shading from neighbours can occur
     - `site_df::DataFrame`: Data defining the initial site properties to be modelled
     - `demography_df::DataFrame`: Species specific demography values for the species to be modelled
+    - `ENSO_df::DataFrame`: Probabilities defining the ENSO transition matrix
     - `seed::Int64`: Random seed value to allow for repeatability
     - `disturb_freq::Float64`: Probaility of a disturbance occurring in a tick
     - `max_disturb_size::Float64`: Maximum proportion of patch that may be impacted by a single disturbance
@@ -124,6 +125,7 @@ module Setup
         max_shade_distance::Int64 = 32,
         site_df::DataFrame = site_df,
         demography_df::DataFrame = demography_df,
+        ENSO_df::DataFrame = ENSO_df,
         seed::Int64 = 999,
         disturb_freq::Float64 = 0.100,
         max_disturb_size::Float64 = 0.40,
@@ -231,6 +233,7 @@ module Setup
         rust_target = demography_df.susceptible_rust::Vector{Int64}
 
         #* Define initial steps weather adjustment on mortality
+        ENSO_state = string(rand(["LN", "LNL", "N", "ENL", "EN"]))
         weather_adjustment = 0.0
         if weather
             weather_adjustment = rand(Normal(0, weather_variability))
@@ -294,7 +297,6 @@ module Setup
             :gap_maker => gap_maker::Vector{Int64},
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
-            #:max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
             :rust_target => rust_target::Vector{Int64},
             :weather_adjustment => weather_adjustment::Float64,
@@ -332,6 +334,8 @@ module Setup
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
             :weather => weather::Bool,
             :weather_variability => weather_variability::Float64,
+            :ENSO_transitions => ENSO_df::DataFrame,
+            :ENSO_state => ENSO_state::String,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
