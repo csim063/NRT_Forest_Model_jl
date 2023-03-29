@@ -264,13 +264,14 @@ module demog_funcs
                                                     D::Int64,)
 
             ## If there are avaible cells select one to be the target
-            target = Int64[]
-            if isempty(D_nhbs) .== false
+            target = nothing
+            if !isempty(D_nhbs) #.== false
                 n = rand(D_nhbs)
                 target = [findfirst(isequal([n]), pcors)]
             end
 
-            if length(target) > 0
+            #if length(target) > 0
+            if target !== nothing
                 target_id = rand(target)
                 #* If regeneration height is larger than targets
                 #* mean shading height assign the seed

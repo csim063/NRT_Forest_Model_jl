@@ -70,6 +70,7 @@ module Setup
     - `max_shade_distance::Int64`: Maximum distance over which shading from neighbours can occur
     - `site_df::DataFrame`: Data defining the initial site properties to be modelled
     - `demography_df::DataFrame`: Species specific demography values for the species to be modelled
+    - `ENSO_df::DataFrame`: Probabilities defining the ENSO transition matrix
     - `seed::Int64`: Random seed value to allow for repeatability
     - `disturb_freq::Float64`: Probaility of a disturbance occurring in a tick
     - `max_disturb_size::Float64`: Maximum proportion of patch that may be impacted by a single disturbance
@@ -115,6 +116,7 @@ module Setup
     - `rust_min_symptomatic_age::Int64`: Age (number of ticks) after which rust can cause
         mortality in a tree
     - `weather::Bool`: Whether to include weather effects or not
+    - `max_ENSO_impact::Float64`: Maximum value ENSO may alter demographic rates by
     """
     function forest_model(;
         forest_area::Int64 = 16,
@@ -124,6 +126,7 @@ module Setup
         max_shade_distance::Int64 = 32,
         site_df::DataFrame = site_df,
         demography_df::DataFrame = demography_df,
+        ENSO_df::DataFrame = ENSO_df,
         seed::Int64 = 999,
         disturb_freq::Float64 = 0.100,
         max_disturb_size::Float64 = 0.40,
@@ -155,7 +158,7 @@ module Setup
         rust_mortality_prob::Float64 = 0.1,
         rust_min_symptomatic_age::Int64 = 2,
         weather::Bool = false,
-        weather_variability::Float64 = 0.01,
+        max_ENSO_impact::Float64 = 0.25,
         )
 
 
@@ -231,9 +234,28 @@ module Setup
         rust_target = demography_df.susceptible_rust::Vector{Int64}
 
         #* Define initial steps weather adjustment on mortality
+        ENSO_state = string(rand(["LN", "LNL", "N", "ENL", "EN"]))
         weather_adjustment = 0.0
         if weather
-            weather_adjustment = rand(Normal(0, weather_variability))
+            #* If ENSO is not neutral, then set a non-zero weather adjustment
+            if ENSO_state != "N"
+                max_val = max_ENSO_impact/2
+                min_val = 0.0
+                #* If ENSO is strong draw from a distribution with higher min and max values
+                if ENSO_state == "LN" || ENSO_state == "EN"
+                    max_val = max_ENSO_impact
+                    min_val = max_ENSO_impact/2
+                end
+
+                weather_adjustment = rand(Uniform(min_val, max_val))
+
+                #! We assume La Nina is negative and El Nino is positive, meaning that 
+                #! La Nina will decrease mortality and El Nino will increase mortality
+                #! i.e La Nina good for trees, El Nino bad for trees.
+                if ENSO_state == "LN" || ENSO_state == "LNL"
+                    weather_adjustment = -weather_adjustment
+                end
+            end
         end
 
         ###--------------------ASSIGN INITIAL PROPERTY VARIABLES----------------------###
@@ -294,7 +316,6 @@ module Setup
             :gap_maker => gap_maker::Vector{Int64},
             :shade_tolerance => shade_tolerance::Vector{Float64},
             :saplings_to_plant => saplings_to_plant::Vector{Int64},
-            #:max_density => sap_density::Int64,
             :phytothera_target => phytothera_target::Vector{Int64},
             :rust_target => rust_target::Vector{Int64},
             :weather_adjustment => weather_adjustment::Float64,
@@ -331,7 +352,9 @@ module Setup
             :rust_mortality_prob => rust_mortality_prob::Float64,
             :rust_min_symptomatic_age => rust_min_symptomatic_age::Int64,
             :weather => weather::Bool,
-            :weather_variability => weather_variability::Float64,
+            :ENSO_transitions => ENSO_df::DataFrame,
+            :ENSO_state => ENSO_state::String,
+            :max_ENSO_impact => max_ENSO_impact::Float64,
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
