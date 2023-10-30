@@ -39,6 +39,12 @@ demography_df = DataFrame(CSV.File("Data/demography.txt"));
 site_df = DataFrame(CSV.File("Data/forest.txt"));
 ENSO_df = DataFrame(CSV.File("Data/ENSO_transition.csv"));
 
+#TODO: This is a test external gradient. This will be replaced with a real external gradient.
+external_gradient = DataFrame(CSV.File("Data/test_external_gradient.csv"));
+
+#* Convert the external gradient to a matrix
+external_gradient = Matrix(external_gradient);
+
 #//-----------------------------------------------------------------------------------------------#
 #% SETUP MODEL
 if record_data == true
@@ -83,7 +89,8 @@ model = Setup.forest_model(forest_area = 4,
                         rust_mortality_prob = 0.1,
                         rust_min_symptomatic_age = 5,
                         weather = false, # Whether to include weather (ENSO) in the model
-                        max_ENSO_impact = 0.1 # The maximum impact ENSO can have on the model
+                        max_ENSO_impact = 0.1, # The maximum impact ENSO can have on the model
+                        external_gradient = external_gradient,
                         );
 
 #//-----------------------------------------------------------------------------------------------#

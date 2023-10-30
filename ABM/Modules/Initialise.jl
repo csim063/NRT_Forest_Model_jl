@@ -159,6 +159,7 @@ module Setup
         rust_min_symptomatic_age::Int64 = 2,
         weather::Bool = false,
         max_ENSO_impact::Float64 = 0.25,
+        external_gradient::Array{Int64, 2} = external_gradient
         )
 
 
@@ -355,6 +356,7 @@ module Setup
             :ENSO_transitions => ENSO_df::DataFrame,
             :ENSO_state => ENSO_state::String,
             :max_ENSO_impact => max_ENSO_impact::Float64,
+            :external_gradient => external_gradient::Array{Int64, 2}
         )
 
         ###------------------------------CREATE THE MODEL-----------------------------###
