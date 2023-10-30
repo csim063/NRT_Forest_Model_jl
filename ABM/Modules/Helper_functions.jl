@@ -381,7 +381,10 @@ module set_get_functions
         if rand_num < cum_weights[1]
             new_state = current_ENSO
         else
-            new_state = states[findnext(cum_weights .> rand_num, true)]
+            #new_state = states[findnext(cum_weights .> rand_num, true)]
+            #* Check that there is a matching number to index and if not select a random state
+            idx = findnext(cum_weights .> rand_num, true)
+            new_state = idx !== nothing ? states[idx] : rand(["LN", "LNL", "N", "ENL", "EN"])
         end
 
         return new_state
